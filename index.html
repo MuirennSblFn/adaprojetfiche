@@ -761,7 +761,7 @@ const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g, c=>({"&":"&amp;","<":
 
 function freshState(){
   return {
-    identity:{name:"",player:"",align:"",eyes:"",hair:"",height:"",desc:""},
+    identity:{name:"",player:"",align:"",eyes:"",hair:"",height:"",desc:"",portrait:null},
     raceId:null, raceChoiceBonuses:[],
     classMainId:null, classSecondaryId:null,
     arcaneMain:null, deityId:null, guerrierWeaponId:null, vampireChoice:null,
@@ -783,6 +783,32 @@ function freshState(){
 let state = loadState() || freshState();
 function saveState(){ try{ localStorage.setItem("ada_char_v1", JSON.stringify(state)); }catch(e){} }
 function loadState(){ try{ const s=localStorage.getItem("ada_char_v1"); return s?JSON.parse(s):null; }catch(e){ return null; } }
+
+// Redimensionne l'image de portrait choisie (côté client, via canvas) avant de la stocker en data URL,
+// pour rester léger dans le localStorage et dans la fiche exportée.
+function resizePortraitFile(file, cb){
+  if(!file || !file.type || file.type.indexOf("image/")!==0){ cb(null); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 480;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if(w>maxDim || h>maxDim){
+        if(w>=h){ h = Math.round(h*maxDim/w); w = maxDim; }
+        else { w = Math.round(w*maxDim/h); h = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      try{ cb(canvas.toDataURL("image/jpeg", 0.85)); }catch(err){ cb(null); }
+    };
+    img.onerror = () => cb(null);
+    img.src = e.target.result;
+  };
+  reader.onerror = () => cb(null);
+  reader.readAsDataURL(file);
+}
 
 /* ---------- helpers de calcul ---------- */
 function mod(v){ return Math.floor((v-10)/2); }
@@ -941,8 +967,13 @@ function renderSummary(){
   const pv=pvValue(), gold=goldStart();
   root.innerHTML = `
    <div class="sumcard">
-     <div class="name">${esc(state.identity.name||"Sans nom")}</div>
-     <div class="sub">${race?esc(race.name):"Race non choisie"} ${cls?" · "+esc(cls.name):""}${cls2?" / "+esc(cls2.name):""}</div>
+     <div style="display:flex;align-items:center;gap:.7rem">
+       ${state.identity.portrait?`<img src="${state.identity.portrait}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--border);flex:0 0 auto">`:""}
+       <div>
+         <div class="name">${esc(state.identity.name||"Sans nom")}</div>
+         <div class="sub">${race?esc(race.name):"Race non choisie"} ${cls?" · "+esc(cls.name):""}${cls2?" / "+esc(cls2.name):""}</div>
+       </div>
+     </div>
      <div class="pillrow">
        ${state.identity.align?`<span class="badge">${esc(state.identity.align)}</span>`:""}
        ${pv!=null?`<span class="badge pos">PV ${pv}</span>`:""}
@@ -971,13 +1002,23 @@ function renderStep1(root){
   const race=getRace();
   root.innerHTML = `
    <div class="step-head"><div><div class="eyebrow">Chapitre I</div><h2>Identité, race &amp; classe</h2></div></div>
-   <div class="grid2">
-     <div class="field"><label>Nom du personnage</label><input id="f-name" value="${esc(state.identity.name)}"></div>
-     <div class="field"><label>Nom du joueur</label><input id="f-player" value="${esc(state.identity.player)}"></div>
-     <div class="field"><label>Alignement</label><input id="f-align" placeholder="ex. Loyal Bon" value="${esc(state.identity.align)}"></div>
-     <div class="field"><label>Taille</label><input id="f-height" value="${esc(state.identity.height)}"></div>
-     <div class="field"><label>Yeux</label><input id="f-eyes" value="${esc(state.identity.eyes)}"></div>
-     <div class="field"><label>Cheveux</label><input id="f-hair" value="${esc(state.identity.hair)}"></div>
+   <div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-start">
+     <div class="field no-print" style="width:132px;flex:0 0 auto">
+       <label>Portrait</label>
+       <div style="width:132px;height:132px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--ink-faint);font-size:.68rem;text-align:center;padding:.3rem">
+         ${state.identity.portrait?`<img src="${state.identity.portrait}" alt="Portrait du personnage" style="width:100%;height:100%;object-fit:cover">`:"Aucun portrait"}
+       </div>
+       <input type="file" id="f-portrait" accept="image/*" style="margin-top:.4rem;width:132px;font-size:.68rem">
+       ${state.identity.portrait?`<button type="button" class="btn ghost small" id="removePortrait" style="margin-top:.35rem;width:132px">✕ Retirer</button>`:""}
+     </div>
+     <div class="grid2" style="flex:1 1 340px">
+       <div class="field"><label>Nom du personnage</label><input id="f-name" value="${esc(state.identity.name)}"></div>
+       <div class="field"><label>Nom du joueur</label><input id="f-player" value="${esc(state.identity.player)}"></div>
+       <div class="field"><label>Alignement</label><input id="f-align" placeholder="ex. Loyal Bon" value="${esc(state.identity.align)}"></div>
+       <div class="field"><label>Taille</label><input id="f-height" value="${esc(state.identity.height)}"></div>
+       <div class="field"><label>Yeux</label><input id="f-eyes" value="${esc(state.identity.eyes)}"></div>
+       <div class="field"><label>Cheveux</label><input id="f-hair" value="${esc(state.identity.hair)}"></div>
+     </div>
    </div>
 
    <h3 style="margin-top:1.4rem">Race</h3>
@@ -1054,6 +1095,18 @@ function renderStep1(root){
   $("#f-eyes").addEventListener("input", e=>{state.identity.eyes=e.target.value; saveState();});
   $("#f-hair").addEventListener("input", e=>{state.identity.hair=e.target.value; saveState();});
   $("#f-desc").addEventListener("input", e=>{state.identity.desc=e.target.value; saveState();});
+  const fp=$("#f-portrait"); if(fp) fp.addEventListener("change", e=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    resizePortraitFile(file, dataUrl=>{
+      if(!dataUrl) return; // fichier illisible ou non-image : on ignore silencieusement
+      state.identity.portrait = dataUrl;
+      saveState(); renderStep1(root); renderSummary();
+    });
+  });
+  const rmp=$("#removePortrait"); if(rmp) rmp.addEventListener("click", ()=>{
+    state.identity.portrait = null; saveState(); renderStep1(root); renderSummary();
+  });
   const fa=$("#f-arcane"); if(fa) fa.addEventListener("change", e=>{state.arcaneMain=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
   const fd=$("#f-deity"); if(fd) fd.addEventListener("change", e=>{state.deityId=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
   const fw=$("#f-guerrierweapon"); if(fw) fw.addEventListener("change", e=>{state.guerrierWeaponId=e.target.value||null; saveState(); renderSummary();});
@@ -1568,8 +1621,8 @@ function renderStep8(root){
    </div>
    <div id="sheet" class="sheet" style="margin-top:1.6rem"></div>
    <div class="step-foot no-print"><button class="btn secondary" id="prev8">← Précédent</button><span></span></div>`;
-  $("#f-equip").addEventListener("input", e=>{ s.equipmentText=e.target.value; core.saveState(); });
-  $("#f-hist").addEventListener("input", e=>{ s.historyText=e.target.value; core.saveState(); });
+  $("#f-equip").addEventListener("input", e=>{ s.equipmentText=e.target.value; core.saveState(); paintSheet(); });
+  $("#f-hist").addEventListener("input", e=>{ s.historyText=e.target.value; core.saveState(); paintSheet(); });
   $("#prev8").addEventListener("click", ()=>core.go(6));
   $("#printBtn").addEventListener("click", ()=>window.print());
 
@@ -1730,12 +1783,19 @@ ${sheetHtml}
     $("#sheet").innerHTML = `
      <div class="block">
       <h4>Identité</h4>
-      <div class="two-col">
-        <div><b>${esc(s.identity.name||"—")}</b><br>Joueur : ${esc(s.identity.player||"—")}<br>Alignement : ${esc(s.identity.align||"—")}</div>
-        <div>Race : ${esc(race?race.name:"—")}<br>Classe : ${esc(cls?cls.name:"—")}${cls2?` / ${esc(cls2.name)}`:""}<br>Taille : ${esc(s.identity.height||"—")} · Yeux : ${esc(s.identity.eyes||"—")} · Cheveux : ${esc(s.identity.hair||"—")}</div>
+      <div style="display:flex;gap:1.1rem;flex-wrap:wrap;align-items:flex-start">
+        ${s.identity.portrait?`<img src="${s.identity.portrait}" alt="Portrait du personnage" style="width:110px;height:110px;border-radius:8px;object-fit:cover;border:1px solid var(--border);flex:0 0 auto">`:""}
+        <div class="two-col" style="flex:1 1 300px">
+          <div><b>${esc(s.identity.name||"—")}</b><br>Joueur : ${esc(s.identity.player||"—")}<br>Alignement : ${esc(s.identity.align||"—")}</div>
+          <div>Race : ${esc(race?race.name:"—")}<br>Classe : ${esc(cls?cls.name:"—")}${cls2?` / ${esc(cls2.name)}`:""}<br>Taille : ${esc(s.identity.height||"—")} · Yeux : ${esc(s.identity.eyes||"—")} · Cheveux : ${esc(s.identity.hair||"—")}</div>
+        </div>
       </div>
-      ${s.identity.desc?`<p style="margin-top:.6rem">${esc(s.identity.desc)}</p>`:""}
-      ${s.historyText?`<p style="margin-top:.4rem">${esc(s.historyText)}</p>`:""}
+     </div>
+
+     <div class="block"><h4>Histoire</h4>
+       ${s.identity.desc?`<p>${esc(s.identity.desc)}</p>`:""}
+       ${s.historyText?`<p style="${s.identity.desc?"margin-top:.6rem":""}">${esc(s.historyText)}</p>`:""}
+       ${(!s.identity.desc && !s.historyText)?"<p>—</p>":""}
      </div>
 
      <div class="block">

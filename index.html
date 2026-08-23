@@ -1,0 +1,1604 @@
+<title>Forge de Personnage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#efe4c9;
+  --surface:#fbf4e2;
+  --surface-2:#f2e6c8;
+  --ink:#2b2013;
+  --ink-soft:#5b4c38;
+  --ink-faint:#8a7a5c;
+  --accent:#8f251f;
+  --accent-ink:#fff7e9;
+  --gold:#8a6a1e;
+  --gold-soft:#c9a94a;
+  --good:#3e6b4f;
+  --danger:#9c2b26;
+  --border:#c9b78e;
+  --border-soft:#ddd0aa;
+  --shadow:0 12px 30px -14px rgba(43,32,19,.45);
+  --radius:10px;
+  --pentagram-opacity:.05;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161209;
+    --surface:#201a10;
+    --surface-2:#271f13;
+    --ink:#ece0bf;
+    --ink-soft:#c1ac7c;
+    --ink-faint:#8d7a54;
+    --accent:#e0665a;
+    --accent-ink:#1c1108;
+    --gold:#d7b445;
+    --gold-soft:#c9a94a;
+    --good:#7fb98f;
+    --danger:#e0665a;
+    --border:#4a3c22;
+    --border-soft:#3a2f1c;
+    --shadow:0 16px 34px -14px rgba(0,0,0,.6);
+    --pentagram-opacity:.07;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161209;
+  --surface:#201a10;
+  --surface-2:#271f13;
+  --ink:#ece0bf;
+  --ink-soft:#c1ac7c;
+  --ink-faint:#8d7a54;
+  --accent:#e0665a;
+  --accent-ink:#1c1108;
+  --gold:#d7b445;
+  --gold-soft:#c9a94a;
+  --good:#7fb98f;
+  --danger:#e0665a;
+  --border:#4a3c22;
+  --border-soft:#3a2f1c;
+  --shadow:0 16px 34px -14px rgba(0,0,0,.6);
+  --pentagram-opacity:.07;
+}
+
+/* ============ BASE ============ */
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:light dark}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Spectral",Georgia,"Times New Roman",serif;
+  font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Cinzel",Georgia,serif;font-weight:600;letter-spacing:.02em;text-wrap:balance;margin:0 0 .4em}
+.disp{font-family:"Cinzel Decorative","Cinzel",serif}
+a{color:var(--accent)}
+button{font-family:inherit}
+input,select,textarea{font-family:inherit;color:var(--ink);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:.5em .6em;font-size:.95rem}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--gold-soft);color:#2b2013}
+.tabular{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+/* faint pentagram watermark, drawn once with CSS conic/radial trick avoided -> use inline SVG bg */
+.parchment-bg{
+  background-image:
+    radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--accent) 18%, transparent) 0, transparent 45%),
+    radial-gradient(circle at 8% 92%, color-mix(in srgb, var(--gold) 14%, transparent) 0, transparent 40%);
+}
+
+/* ============ SHELL LAYOUT ============ */
+.app{min-height:100dvh;display:flex;flex-direction:column}
+header.top{
+  display:flex;align-items:center;gap:.9rem;padding:.85rem 1.4rem;
+  border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:40;
+}
+.brand{display:flex;align-items:center;gap:.7rem;flex:1;min-width:0}
+.brand svg{flex:none}
+.brand .names{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.brand .names b{font-family:"Cinzel",serif;font-size:1.05rem;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .names span{font-size:.72rem;color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase}
+.top-actions{display:flex;gap:.5rem;align-items:center}
+.icon-btn{
+  border:1px solid var(--border);background:var(--surface-2);color:var(--ink);
+  border-radius:8px;width:2.3rem;height:2.3rem;display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.icon-btn:hover{border-color:var(--accent)}
+
+.layout{
+  flex:1;display:grid;grid-template-columns:220px minmax(0,1fr) 300px;gap:1.2rem;
+  max-width:1400px;margin:0 auto;width:100%;padding:1.2rem 1.4rem 3rem;
+}
+@media (max-width:1100px){.layout{grid-template-columns:1fr;padding:1rem}}
+
+/* ---- chapter rail ---- */
+nav.rail{position:sticky;top:4.6rem;align-self:start;display:flex;flex-direction:column;gap:.35rem}
+.rail button{
+  display:flex;align-items:baseline;gap:.6rem;text-align:left;background:transparent;border:1px solid transparent;
+  border-radius:8px;padding:.55rem .7rem;cursor:pointer;color:var(--ink-soft);
+}
+.rail button .num{font-family:"Cinzel",serif;font-size:.8rem;color:var(--gold);flex:none;width:1.6em}
+.rail button .lbl{font-size:.86rem;line-height:1.2}
+.rail button:hover{background:var(--surface-2)}
+.rail button[aria-current="step"]{background:var(--surface);border-color:var(--border);color:var(--ink);box-shadow:var(--shadow)}
+.rail button[aria-current="step"] .num{color:var(--accent)}
+.rail button.done .num::after{content:"✓";margin-left:.15em}
+@media (max-width:1100px){
+  nav.rail{position:static;flex-direction:row;overflow-x:auto;gap:.4rem;padding-bottom:.3rem}
+  .rail button{flex:none}
+  .rail button .lbl{display:none}
+}
+
+/* ---- main card ---- */
+main.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:1.8rem 2rem 2.2rem;position:relative;overflow:hidden;
+}
+main.card::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:var(--pentagram-opacity);
+  background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><polygon points="100,10 123,72 190,72 136,112 156,178 100,140 44,178 64,112 10,72 77,72" fill="none" stroke="black" stroke-width="4"/></svg>') no-repeat 102% -8%/280px;
+}
+.step-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--border-soft);padding-bottom:.7rem;margin-bottom:1.3rem}
+.step-head .eyebrow{font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.14em;color:var(--gold);text-transform:uppercase}
+.step-head h2{font-size:1.5rem;margin:0}
+.step-foot{display:flex;justify-content:space-between;gap:1rem;margin-top:2rem;padding-top:1.2rem;border-top:1px solid var(--border-soft)}
+
+.field{display:flex;flex-direction:column;gap:.3rem;margin-bottom:1rem}
+.field label{font-size:.78rem;letter-spacing:.04em;color:var(--ink-soft);text-transform:uppercase}
+.field small.help{color:var(--ink-faint);font-size:.78rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 1.2rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 1.2rem}
+@media (max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+
+button.btn{
+  font-family:"Cinzel",serif;font-size:.82rem;letter-spacing:.05em;text-transform:uppercase;
+  border-radius:8px;padding:.65rem 1.2rem;cursor:pointer;border:1px solid var(--accent);
+  background:var(--accent);color:var(--accent-ink);
+}
+button.btn.secondary{background:transparent;color:var(--ink);border-color:var(--border)}
+button.btn.ghost{background:transparent;color:var(--ink-soft);border-color:transparent}
+button.btn:disabled{opacity:.4;cursor:not-allowed}
+button.btn.small{padding:.35rem .7rem;font-size:.72rem}
+
+.card-pick{
+  border:1px solid var(--border);border-radius:8px;padding:.8rem .9rem;cursor:pointer;background:var(--surface-2);
+  display:flex;flex-direction:column;gap:.25rem;transition:border-color .15s;
+}
+.card-pick:hover{border-color:var(--gold)}
+.card-pick.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.card-pick h4{margin:0;font-size:.95rem;font-family:"Cinzel",serif}
+.card-pick p{margin:0;font-size:.82rem;color:var(--ink-soft)}
+.pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.7rem}
+
+.badge{display:inline-flex;align-items:center;gap:.3em;font-size:.72rem;border-radius:99px;padding:.15em .65em;border:1px solid var(--border);color:var(--ink-soft);background:var(--surface-2)}
+.badge.pos{color:var(--good);border-color:color-mix(in srgb, var(--good) 40%, var(--border))}
+.badge.neg{color:var(--danger);border-color:color-mix(in srgb, var(--danger) 40%, var(--border))}
+
+table.simple{border-collapse:collapse;width:100%;font-size:.88rem}
+table.simple th,table.simple td{border-bottom:1px solid var(--border-soft);padding:.35em .5em;text-align:left}
+table.simple th{color:var(--ink-soft);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+
+/* stat blocks */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem}
+.stat-card{border:1px solid var(--border);border-radius:8px;padding:.8rem;background:var(--surface-2);text-align:center}
+.stat-card .lbl{font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
+.stat-card .val{font-size:2.1rem;font-weight:600}
+.stat-card .mod{font-size:.85rem;color:var(--gold)}
+.stat-card .breakdown{font-size:.68rem;color:var(--ink-faint);margin-top:.2rem}
+
+/* skill rows / point buy */
+.skillcat{border:1px solid var(--border);border-radius:8px;margin-bottom:.9rem;overflow:hidden}
+.skillcat > summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:.7rem .9rem;background:var(--surface-2);font-family:"Cinzel",serif;font-size:.85rem;letter-spacing:.03em}
+.skillcat > summary::-webkit-details-marker{display:none}
+.skillcat > summary::after{content:"▸";margin-left:auto;padding-left:.6rem;color:var(--ink-faint)}
+.skillcat[open] > summary::after{content:"▾"}
+.skillrow{display:grid;grid-template-columns:1fr auto auto;gap:.6rem;align-items:center;padding:.5rem .9rem;border-top:1px solid var(--border-soft)}
+.skillrow .name{font-size:.88rem}
+.skillrow input[type=number]{width:4.4rem;text-align:right}
+.skillrow .bonus{font-size:.7rem;color:var(--gold);min-width:3.4rem;text-align:right}
+
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.stepper button{width:1.8rem;height:1.8rem;border:none;background:var(--surface-2);cursor:pointer;color:var(--ink);font-size:1rem;line-height:1}
+.stepper button:hover{background:var(--border-soft)}
+.stepper input{width:3.2rem;border:none;border-left:1px solid var(--border);border-right:1px solid var(--border);text-align:center;border-radius:0;padding:.2rem}
+
+/* budget banner */
+.budget{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.6rem .9rem;margin-bottom:1.1rem;font-size:.85rem}
+.budget b{font-variant-numeric:tabular-nums}
+.budget .ok{color:var(--good)}
+.budget .over{color:var(--danger)}
+
+/* tree branches */
+.branch{border:1px solid var(--border);border-radius:8px;margin-bottom:.8rem;background:var(--surface-2)}
+.branch > .bhead{display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;flex-wrap:wrap}
+.branch h4{margin:0;font-family:"Cinzel",serif;font-size:.92rem;flex:1}
+.branch .mastery{font-variant-numeric:tabular-nums;font-size:1.05rem;color:var(--accent)}
+.branch .nodes{display:flex;flex-wrap:wrap;gap:.4rem;padding:0 .9rem .8rem}
+.node{border:1px solid var(--border);border-radius:6px;padding:.3rem .55rem;font-size:.72rem;color:var(--ink-faint);background:var(--surface);cursor:pointer;white-space:nowrap}
+.node.bought{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.node.locked{opacity:.4;cursor:not-allowed}
+.branch .special{margin:0 .9rem .8rem;font-size:.78rem;color:var(--ink-soft);border-top:1px dashed var(--border-soft);padding-top:.5rem}
+.branch .special b{color:var(--gold)}
+.branch .unlock{margin:.9rem}
+
+/* summary side rail */
+aside.summary{position:sticky;top:4.6rem;align-self:start;display:flex;flex-direction:column;gap:.8rem}
+.sumcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem 1.1rem}
+.sumcard h3{font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:.6rem}
+.sumcard .name{font-family:"Cinzel Decorative",serif;font-size:1.25rem;margin-bottom:.1rem}
+.sumcard .sub{font-size:.8rem;color:var(--ink-soft);margin-bottom:.6rem}
+.pillrow{display:flex;flex-wrap:wrap;gap:.3rem}
+.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.6rem}
+.mini-stats div{text-align:center;font-size:.72rem;color:var(--ink-soft)}
+.mini-stats div b{display:block;font-size:1.05rem;color:var(--ink)}
+@media (max-width:1100px){aside.summary{position:static}}
+
+.dice-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.diefaces{display:flex;gap:.3rem}
+.dieface{width:2.1rem;height:2.1rem;border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.9rem;background:var(--surface-2)}
+.dieface.dropped{opacity:.35;text-decoration:line-through}
+@keyframes rollpop{0%{transform:scale(1)}50%{transform:scale(1.15) rotate(6deg)}100%{transform:scale(1)}}
+.rolling{animation:rollpop .35s ease}
+
+.trait-list{display:flex;flex-wrap:wrap;gap:.5rem}
+.trait-chip{border:1px solid var(--border);border-radius:99px;padding:.35em .8em;font-size:.8rem;cursor:pointer;background:var(--surface-2)}
+.trait-chip.selected{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.trait-chip.negative.selected{background:var(--danger);border-color:var(--danger)}
+
+.note{border-left:3px solid var(--gold);padding:.6rem .9rem;background:var(--surface-2);border-radius:0 6px 6px 0;font-size:.85rem;color:var(--ink-soft);margin:.8rem 0}
+
+/* final sheet */
+.sheet{display:grid;gap:1rem}
+.sheet .block{border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;background:var(--surface-2)}
+.sheet .block h4{font-family:"Cinzel",serif;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.6rem}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:640px){.two-col{grid-template-columns:1fr}}
+
+footer.site{text-align:center;color:var(--ink-faint);font-size:.75rem;padding:1.4rem;}
+
+/* ============ PRINT ============ */
+@media print{
+  header.top,nav.rail,aside.summary,.step-foot,.no-print,.budget,footer.site{display:none !important}
+  body{background:#fff;color:#111}
+  .layout{display:block;padding:0;max-width:none}
+  main.card{box-shadow:none;border:none;padding:0}
+  main.card::before{display:none}
+  .sheet .block{break-inside:avoid;border-color:#999}
+}
+</style>
+
+<div class="app parchment-bg">
+  <header class="top">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 100 100" aria-hidden="true">
+        <polygon points="50,5 61,36 95,36 68,56 78,90 50,70 22,90 32,56 5,36 39,36" fill="none" stroke="var(--accent)" stroke-width="4"/>
+      </svg>
+      <div class="names">
+        <b>Ashford &amp; Dirman Adventures</b>
+        <span>Forge de personnage</span>
+      </div>
+    </div>
+    <div class="top-actions no-print">
+      <button class="icon-btn" id="themeToggle" title="Changer de thème" aria-label="Changer de thème">◐</button>
+      <button class="icon-btn" id="resetBtn" title="Recommencer" aria-label="Recommencer">↺</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail no-print" id="rail" aria-label="Étapes de création"></nav>
+    <main class="card" id="stepRoot"></main>
+    <aside class="summary no-print" id="summaryRoot"></aside>
+  </div>
+
+  <footer class="site">Outil non-officiel pour la Bible « Ashford &amp; Dirman Adventures » — usage personnel de table.</footer>
+</div>
+
+<script>
+window.ADA = {}; // namespace, filled by subsequent scripts
+</script>
+<script>
+/* =====================================================================
+   DONNÉES DE RÈGLES — extraites du livre « Ashford & Dirman Adventures »
+   ===================================================================== */
+(function(){
+"use strict";
+const STATS = ["FOR","CON","INT","DEX","CHA","CHANCE"];
+const STAT_LABELS = {FOR:"Force",CON:"Constitution",INT:"Intelligence",DEX:"Dextérité",CHA:"Charisme",CHANCE:"Chance"};
+
+// ---- Races -----------------------------------------------------------
+// bonus/malus: {stat, op:'add'|'mult'|'div', val}. choice: nombre de +1 libres.
+const RACES = [
+ {id:"humain",name:"Humain",choice:2,bonus:[],malus:[],
+  traits:["Compétent : +1 point d'arbre tous les trois niveaux"],
+  desc:"Peuple majoritaire et le plus polyvalent du Continent. Vit jusqu'à 70 ans."},
+ {id:"nain",name:"Nain",skillBonuses:[{skill:"Artisanat",amount:10},{skill:"Connaissance",amount:10}],bonus:[{stat:"FOR",val:1},{stat:"CON",val:1}],malus:[{stat:"DEX",val:-2}],
+  traits:["Vision nocturne","Artisan : +10 en Artisanat (Nain)","Connaissance naine : +10 en Connaissance (Nain)"],
+  desc:"Civilisation en déclin retranchée dans de majestueuses cités. Vit jusqu'à 200 ans."},
+ {id:"semi-nain",name:"Semi-nain",bonus:[{stat:"FOR",val:1},{stat:"CON",val:1}],malus:[{stat:"DEX",val:-1}],
+  traits:["Hybride : choisit un trait racial au choix chez l'un de ses parents","Cosmopolite : +10 en Communication avec les races naines et humaines"],
+  desc:"Fruit de l'union d'un nain et d'une humaine, forte musculature et belle barbe."},
+ {id:"haut-elfe",name:"Haut-elfe",skillBonuses:[{category:"Perception",amount:5}],bonus:[{stat:"DEX",val:2},{stat:"CHA",val:1}],malus:[{stat:"CON",val:-2}],
+  traits:["Nyctalope","Peuple originel : +10 en Communication avec les elfes","Sens aiguisés : +5 en Perception"],
+  desc:"Fiers descendants des premiers elfes. Vit jusqu'à 300 ans."},
+ {id:"elfe-sylvain",name:"Elfe sylvain",skillBonuses:[{skill:"Plantes & Poisons",amount:10},{category:"Perception",amount:5}],bonus:[{stat:"DEX",val:2},{stat:"FOR",val:1}],malus:[{stat:"CON",val:-2}],
+  traits:["Nyctalope","Instinct de la forêt : +10 en Plantes/Poisons, +20 en Discrétion en forêt","Sens aiguisés : +5 en Perception"],
+  desc:"Les plus nombreux des elfes, vivent dans des cités sylvestres."},
+ {id:"elfe-noir",name:"Elfe noir",skillBonuses:[{skill:"Connaissance",amount:10},{category:"Perception",amount:5}],bonus:[{stat:"DEX",val:2},{stat:"INT",val:1}],malus:[{stat:"CON",val:-2}],
+  traits:["Nyctalope","Affinité magique : +10 en Connaissance (Magie)","Sens aiguisés : +5 en Perception"],
+  desc:"Vivent souvent dans des grottes ou des villes."},
+ {id:"semi-elfe",name:"Semi-elfe",choice:1,bonus:[],malus:[{stat:"CON",val:-1}],
+  traits:["+1 supplémentaire dans la caractéristique du parent (CHA/FOR/INT au choix)","Hybride : choisit un trait racial au choix chez l'un de ses parents","Cosmopolite : +10 en Communication à ses races"],
+  desc:"Rares descendants d'histoires d'amour impossibles entre humains et elfes. ~150 ans."},
+ {id:"orc",name:"Orc",skillBonuses:[{skill:"Intimider",amount:10},{category:"Physique",amount:5},{category:"Discretion",amount:-10}],bonus:[{stat:"FOR",val:2},{stat:"CON",val:1}],malus:[{stat:"INT",val:-1},{stat:"CHA",val:-1}],
+  traits:["Dernier souffle : ignore le premier coup qui va le tuer","Intimidant : +10 en Intimidation","Gros Balourd : -10 en Discrétion (sauf camouflage/déguisement magique)","Grand : +5 en Physique. Doit trouver une monture à sa taille"],
+  desc:"Montagnes de muscles, victimes de racisme malgré leur intégration croissante."},
+ {id:"semi-orc",name:"Semi-orc",bonus:[{stat:"FOR",val:1},{stat:"CON",val:1}],malus:[{stat:"CHA",val:-1}],
+  traits:["Hybride : choisit un trait racial au choix chez l'un de ses parents","Instinct de la Horde : +10 en Combat quand un orc ou semi-orc est à ses côtés"],
+  desc:"Généralement issus de viols, méprisés des deux camps."},
+ {id:"gnome",name:"Gnome",skillBonuses:[{skill:"Connaissance",amount:10},{skill:"Connaissance",amount:10}],bonus:[{stat:"INT",val:2},{stat:"CHA",val:1}],malus:[{stat:"CON",val:-2}],
+  traits:["Affinité magique : +10 en Connaissance (Magie)","Connaissance gnome : +10 en Connaissance (Gnome)"],
+  desc:"Peuple le plus avancé technologiquement, retranché sur l'île-forteresse de Gomina."},
+ {id:"gobelin",name:"Gobelin",skillBonuses:[{category:"Discretion",amount:5}],bonus:[{stat:"DEX",val:2},{stat:"INT",val:2}],malus:[{stat:"FOR",val:-1},{stat:"CON",val:-1}],
+  traits:["Vision nocturne","Rancune tenace : +5 en Combat contre des nains ou semi-nains","Petit : +5 en Discrétion. Doit trouver une monture à sa taille","Rat des tunnels : +10 en Perception dans des souterrains"],
+  desc:"Ennemis de longue date des nains, souvent réduits en esclavage."},
+ {id:"drakeide",name:"Drakéide",bonus:[{stat:"FOR",val:2},{stat:"CON",val:1},{stat:"INT",val:1}],malus:[{stat:"DEX",val:-2},{stat:"CHANCE",val:-2}],
+  traits:["Attaque de souffle : 1D3 dégâts d'un élément (+1D par tranche de 5 niveaux)","Grand : +5 en Physique. Doit trouver une monture à sa taille","Armure naturelle : 5 d'armure (x2 par tranche de 5 niveaux), non cumulable avec une armure"],
+  desc:"Descendants lointains des dragons, très rares. Vit jusqu'à 500 ans."},
+ {id:"mort-vivant",name:"Mort-vivant",bonus:[{stat:"INT",val:2},{stat:"CHANCE",val:1}],malus:[{stat:"FOR",val:-2}],
+  traits:["Pièces détachées : peut remplacer ses membres par le biais d'un phylactère","Immortel : ne peut mourir sauf en cas de Purification","Sang maudit : la Guérison le blesse, les énergies négatives le soignent. Insensible au poison"],
+  desc:"Cadavre ramené à la vie grâce à un phylactère, souvent grand érudit."},
+ {id:"vampire",name:"Vampire",skillBonuses:[{category:"Perception",amount:5}],bonus:[{stat:"FOR",val:1},{stat:"INT",val:1},{stat:"CHA",val:1}],malus:[{stat:"CHANCE",val:-2}],
+  traits:["Nyctalope","Photosensible : test d'Aveuglement si exposé au soleil","Métabolisme accéléré : guérison x2 s'il a bu du sang, sinon la Guérison est inefficace sur lui","Fougue de la jeunesse / Vampire vénérable : +10 en Combat ou en Savoir selon l'âge","Sens aiguisés : +5 en Perception (sauf aveuglement)"],
+  desc:"Race la plus ancienne et la moins répandue. Vit jusqu'à 500 ans."},
+ {id:"azates",name:"Azates",bonus:[{stat:"FOR",val:2},{stat:"INT",val:1}],malus:[{stat:"CON",val:-2}],
+  traits:["Vol : jusqu'à 1000m d'altitude, 50 km/h maximum","Hybride divin : choisit un trait d'humain, selon l'ordalie du dieu duquel il tient sa parenté","Nimbé sacré : régénération d'1d4 par round de combat"],
+  desc:"Race hybride issue de l'accouplement d'une humaine et d'un serviteur divin. Stérile."},
+ {id:"minotaure",name:"Minotaure",skillBonuses:[{category:"Discretion",amount:-10}],bonus:[{stat:"FOR",val:2},{stat:"CON",val:2}],malus:[{stat:"INT",val:-3},{stat:"DEX",val:-1}],
+  traits:["Gros Balourd : -10 en Discrétion","Grand : demande une monture adaptée","Sang bouillonnant : +1 dé de dégâts au premier round face à un ennemi"],
+  desc:"Créature au corps musculeux et à tête de taureau, violente et solitaire."},
+ {id:"centaure",name:"Centaure",skillBonuses:[{category:"Discretion",amount:-10}],bonus:[{stat:"CON",val:2},{stat:"CHA",val:2}],malus:[{stat:"DEX",val:-3}],
+  traits:["Gros Balourd : -10 en Discrétion","Galop : +20 en Athlétisme sur les tests de course","Quadrupède : impossibilité de Grimper"],
+  desc:"Mi-homme mi-cheval, réputés pour leur expertise martiale et leur corps infatigable."},
+ {id:"faune",name:"Faune",skillBonuses:[{category:"Manipulation",amount:10}],bonus:[{stat:"DEX",val:2}],malus:[{stat:"FOR",val:-2}],
+  traits:["Habileté fourbe : +10 en Manipulation","Bacchanales : résistance à l'alcool, capacité innée à danser et jouer de la flûte"],
+  desc:"Corps d'hommes de petite taille, membres inférieurs de boucs, espiègles et fourbes."},
+ {id:"dryade",name:"Dryade",bonus:[{stat:"INT",val:2},{stat:"CHA",val:2}],malus:[{stat:"CON",val:-3}],
+  traits:["Destinée sylvestre : liée à son arbre de naissance, peut y régénérer des PV ou s'y cacher (1 pv perdu si pas fait une fois par jour)","Racines sylvestres : magie des plantes et du bois débloquée automatiquement, +1 dé de dégâts","Ombranchage : +20 en Discrétion dans les forêts"],
+  desc:"Êtres attachés aux forêts et aux bois, leur vie est liée à celle de leur arbre."},
+ {id:"naiade",name:"Naïade",bonus:[{stat:"DEX",val:2},{stat:"CHA",val:2}],malus:[{stat:"CON",val:-3}],
+  traits:["Destinée des eaux vives : liée à son cours d'eau de naissance, peut y régénérer des PV ou s'y cacher (1 pv perdu si pas fait une fois par jour)","Origine aqueuse : +1 dé de dégâts d'eau","Respiration aquatique"],
+  desc:"Issues des cours et étendues d'eau non-océanique."},
+ {id:"profond-sup",name:"Profond (Supérieur)",skillBonuses:[{skill:"Nager",amount:50}],bonus:[{stat:"INT",val:2},{stat:"CHA",val:1},{stat:"DEX",val:1}],malus:[{stat:"CON",val:-2},{stat:"FOR",val:-2}],
+  traits:["Respiration aquatique","Nager +50","Amphibie : +1 dé de dégâts en milieu aquatique","Haut-lignage : peut commander aux Profonds inférieurs et aux animaux marins"],
+  desc:"Hommes-poissons fiers et arrogants, régnant sur les cités englouties."},
+ {id:"profond-inf",name:"Profond (Inférieur)",skillBonuses:[{skill:"Nager",amount:50}],bonus:[{stat:"CON",val:1},{stat:"DEX",val:1}],malus:[],
+  traits:["Respiration aquatique","Nager +50"],
+  desc:"Morphologie proche du mérou, moins séduisants mais plus résistants que les Profonds supérieurs."},
+ {id:"zeite",name:"Zeite",skillBonuses:[{skill:"Persuader",amount:10}],bonus:[{stat:"CHA",val:2},{stat:"INT",val:2}],malus:[{stat:"CON",val:-2},{stat:"CHANCE",val:-2}],
+  traits:["Enfer-né : +10 en Démomancie, Destruction Feu +1d10","Entité démoniaque : subit +1d6 de dégâts des attaques d'alignement Bon","Pactisant : +10 en Persuasion"],
+  desc:"Nés d'un parent démoniaque et d'un parent homme, dépourvus de sexe."},
+ {id:"gallinaris",name:"Gallinaris",skillBonuses:[{skill:"Connaissance",amount:20}],bonus:[{stat:"CHA",op:"mult",val:2},{stat:"INT",val:2}],malus:[{stat:"FOR",val:-2}],
+  traits:["Veinard : sur un jet de Chance réussi avant une action, bonus de +10 à celle-ci","Mémoire du monde : +20 en Connaissance","Armure de plume : armure naturelle +5"],
+  desc:"Êtres oiseaux au physique humanoïde, réputés porteurs de chance."},
+];
+
+// ---- Classes -----------------------------------------------------------
+const CLASSES_BASE = [
+ {id:"guerrier",name:"Guerrier",tagline:"Maître d'armes et d'armures de toutes sortes, courageux et vaillant.",
+  n1:"Enchaînement : si le prochain coup est réussi, il peut tenter de frapper un second ennemi. (+1 / +1 ennemi)",
+  n3:"Science de la bousculade : met un ennemi au sol pour 1d3+1 rounds, 1d4+1 par ce montant en dégâts.",
+  n5:"Désarmement : enlève une arme ou un bouclier à son ennemi et attaque. (Enlève arme et bouclier ou deux armes. Attaque suivante +1d8/+1D dégâts)",
+  passif:"+10 de compétence sur une arme choisie."},
+ {id:"paladin",name:"Paladin",tagline:"Chevalier à l'armure étincelante, dévoué à la loi et au bien.",
+  n1:"Altruisme : se jette devant un compagnon et prend les dégâts à sa place, réduits de moitié. Agit toujours en premier. (2 fois par combat / contre-attaque)",
+  n3:"Encaisse tous les dégâts infligés à ses alliés sur un round, et les rend sous forme de soin au tour suivant. (2 alliés / 3 alliés)",
+  n5:"Lame divine : les dégâts de la prochaine attaque sont doublés. (Sur deux cibles / Stun les ennemis)",
+  passif:"Détection du mal et du mensonge une fois par jour."},
+ {id:"mage",name:"Mage",tagline:"À force d'étudier sans cesse, il maîtrise la magie et acquiert d'incroyables pouvoirs.",
+  n1:"Amulette de magicien : lance un sort défini automatiquement (2 fois par jour / 3 fois par jour)",
+  n3:"École spécialisée : +1 de critique sur une branche (+2 / +5)",
+  n5:"Science de la fusion : x2 dégâts/durée si fusion (x3 / x5)",
+  passif:"Choix d'une arcane de magicien."},
+ {id:"voleur",name:"Voleur",skillBonuses:[{skill:"Evaluer un trésor",amount:10},{skill:"Marchander",amount:10}],
+  tagline:"À la fois voleur et éclaireur, opportuniste capable de coups terribles sur les ennemis surpris.",
+  n1:"Passif Agressif : si le PJ frappe dans le dos, les dégâts sont doublés. (x3 / x5)",
+  n3:"Furtivité : devient invisible pour 1 round. (3 fois / tant qu'il n'attaque pas)",
+  n5:"Travail d'équipe : après une attaque, projette l'adversaire sur un ennemi qui peut l'attaquer. (Dégâts de l'allié doublés / dégâts simples mais peut utiliser une compétence)",
+  passif:"Évaluer un trésor et marchander +10."},
+ {id:"rodeur",name:"Rôdeur",skillBonuses:[{skill:"Pister",amount:20},{skill:"Embuscade",amount:20}],
+  tagline:"Pisteur et chasseur, excelle à débusquer ses ennemis.",
+  n1:"Camouflage : le rôdeur se camoufle, plus difficile à toucher. (-20 et +1D / -30 et +1D)",
+  n3:"Piège : immobilise un ennemi jusqu'à ce qu'il se dégage. (+1d4 dégâts / 2)",
+  n5:"Marquage : prend un round pour marquer un ennemi, la prochaine attaque inflige des dégâts doublés ignorant l'armure. (x3 / x5)",
+  passif:"Milieu de prédilection : Pister et Embuscade +20 (désert, montagne, plaines, forêt, grottes, milieu urbain)."},
+ {id:"barbare",name:"Barbare",tagline:"Combattant brutal venu des frontières de la civilisation.",
+  n1:"Cerné : +1 dégât par ennemi autour de lui (+2 / +3)",
+  n3:"Sacrifice de sang : divise ses PV par deux pour une attaque à double dégâts. (2 cibles / soigne le PJ)",
+  n5:"Mannequin d'entraînement : sacrifie un round, redistribue les dégâts encaissés à chaque ennemi l'ayant touché. (+2PV par ennemi tué / +5)",
+  passif:"+1 de dégâts par pièce d'armure manquante."},
+ {id:"druide",name:"Druide",tagline:"Lanceur de sorts vénérant la nature, allié des animaux et métamorphe doué.",
+  n1:"Magie du bois (sans fusion) +10 (+15 / +20)",
+  n3:"Métamorphe : +10 en Métamorphose (+15 / +20)",
+  n5:"Arme animale : le compagnon se transforme en arme, ses dés de vie deviennent ses dés de dégâts. (2 utilisations / 5 utilisations)",
+  passif:"Obtention d'un compagnon animal."},
+ {id:"ensorceleur",name:"Ensorceleur",tagline:"Lanceur de sorts venu au monde avec un don inné pour la magie.",
+  n1:"Magie offensive : dégâts/durée doublés sur un sort (x3 / x5)",
+  n3:"École spécialisée : +1 de critique sur une branche (+3 / +5)",
+  n5:"Nature magique : attaque sous forme démoniaque, dégâts x2, armure +10, RM +10 (2 fois par combat / 5 fois par combat)",
+  passif:"Choix d'une arcane d'ensorceleur."},
+ {id:"moine",name:"Moine",skillBonuses:[{skill:"Culbuter",amount:10},{skill:"Equilibre",amount:10}],
+  tagline:"Pratiquant des arts martiaux, son corps est sa meilleure arme et sa meilleure défense.",
+  n1:"Déluge de coups : s'il combat à mains nues, peut attaquer deux fois le même ennemi. (3 fois / autant qu'il peut)",
+  n3:"Paume paralysante : paralyse un ennemi pour 1d4 rounds (+1D / +1D)",
+  n5:"Paume fatale : auto-attaque dont les dégâts sont doublés. (les dégâts se répètent / 1 round puis décès)",
+  passif:"Culbuter et Équilibre +10."},
+ {id:"pretre",name:"Prêtre",tagline:"Fidèle et dévoué à son dieu, soigne les blessures et attire les foudres divines.",
+  n1:"Imposition des mains : soigne 1d4/niveau (+1D / +1D)",
+  n3:"Bénédiction divine : confère 10 points de RM et une insensibilité aux altérations. (Soi + 2 cibles / soi + 3 cibles)",
+  n5:"Châtiment divin : confère des dégâts x2 sur la prochaine attaque du bénéficiaire (x2 ou x3 selon alignement / x3 ou x5)",
+  passif:"Une oraison (sortilège divin) gratuite par jour."},
+ {id:"barde",name:"Barde",tagline:"Talentueux touche-à-tout, utilise ses instruments comme de dangereuses armes magiques.",
+  n1:"Symphonie soporifique, endort un ennemi (3 ennemis / 5 ennemis)",
+  n3:"Talent de représentation, +10 en Communication pour les spectacles (+20 / +30)",
+  n5:"Encouragement prodigieux, double les modificateurs (x3 / x5)",
+  passif:"Talent de spectacle : réussite automatique une fois par jour."},
+ {id:"pirate",name:"Pirate",skillBonuses:[{skill:"Naviguer",amount:10}],
+  tagline:"Voyageur des mers et brute intimidante en quête de trésor.",
+  n1:"Talent de marin : +10 en Navigation, jamais de test d'Équilibre ou de Navigation en bateau",
+  n3:"Bagout de pirate : Évaluer un trésor +10, Marchander +10, +10 en Intimidation",
+  n5:"Science de la poudre : débloque la branche arme à feu (+5 / +10 / +15)",
+  passif:"Insubmersible : évite la noyade une fois par jour."},
+ {id:"alchimiste",name:"Alchimiste",tagline:"Grand connaisseur des plantes et des métaux, renverse les batailles par ses potions.",
+  n1:"Connaisseur : auto-administration efficacité x2 / production x2 / deux potions simultanées",
+  n3:"Amplificateur : effets +1D / +1D / +1D",
+  n5:"Quintessence : durée +5 rounds / +10 / +15",
+  passif:"Peut concevoir des potions sans jet, simplement en ayant débloqué la branche de magie."},
+];
+const CLASSES_SPECIAL = [
+ {id:"champion",name:"Champion",tagline:"Incarnation d'une divinité parmi les mortels, obtenu par destin ou prophétie.",
+  n1:"Conscience divine : quand le champion touche un ennemi, celui-ci est étourdi pendant 1d6 rounds.",
+  n5:"Rayonnement divin : émet un rayon infligeant 5 dégâts par rang à tous les ennemis touchés, ignorant l'armure ; soigne les alliés à hauteur de 5PV par niveau.",
+  n10:"Forme semi-divine : devient une incarnation de son dieu pendant trois rounds (+10 armure et +10 PV par rang, +10 dégâts par rang, critique automatique).",
+  passif:"Peut ignorer la mort une fois dans sa vie (+1 fois par champion adverse vaincu)."},
+ {id:"compagnon-errant",name:"Compagnon de l'Errant",tagline:"Le joueur trouve un pendentif contenant une entité aberrante appelée l'Errant, liée à lui à vie.",
+  n1:"L'Errant peut matérialiser des organes auxquels le Compagnon a accès par télépathie.",
+  n3:"Le Compagnon peut interroger l'Errant une fois par jour sur une question de connaissance, puis sur le passé (niv.3) et le futur (niv.4).",
+  n10:"L'Errant peut prendre possession d'un humain pour lui faire dire la vérité à une question (niveau 8).",
+  passif:"Lien psychique permanent avec l'Errant, survie mutuelle."},
+ {id:"loup-garou",name:"Loup-garou",skillBonuses:[{skill:"Ecouter",amount:10},{skill:"Sentir",amount:10}],
+  tagline:"Être humain atteint d'une malédiction qui le pousse à se changer en loup à la pleine lune.",
+  n1:"Capable de se transformer en loup sur commande, assimilable à Métamorphose Animale.",
+  n3:"Capable d'adopter une forme monstrueuse mi-homme mi-loup : débloque Corps à corps (80), Force passe à 20, détruit l'armure portée.",
+  n5:"Ses deux formes régénèrent les points de vie qu'elles infligent sur les PV adverses.",
+  passif:"Sens lupin (Écouter/Sentir +10), Vision nocturne, capable de commander aux loups."},
+];
+
+// ---- Compétences civiles ----------------------------------------------
+const SKILL_CATEGORIES = {
+ Savoir:["Evaluer un trésor","Premiers soins","Cartographier","Mémoriser","Naviguer","Plantes & Poisons","Lire & Ecrire","Connaissance"],
+ Communication:["Eloquence","Charmer","Intimider","Persuader","Marchander","Instinct de la rue"],
+ Physique:["Grimper","Athlétisme","Sauter","Equitation","Nager","Culbuter","Lutte"],
+ Manipulation:["Jongler","Crocheter","Passe-passe","Faire un piège","Faire un nœud","Artisanat"],
+ Discretion:["Embuscade","Dissimuler","Se cacher","Mouvement silencieux","Déguisement"],
+ Perception:["Equilibre","Ecouter","Sentir","Chercher","Voir","Goûter","Pister"],
+};
+// stat associée à chaque catégorie (pour le calcul des points, base = mod x6)
+const CATEGORY_STAT = {Savoir:"INT",Communication:"CHA",Physique:"FOR",Manipulation:"DEX",Discretion:"DEX",Perception:"INT"};
+
+// ---- Traits naturels (paire positif/négatif par compétence) -----------
+const NATURAL_TRAITS = {
+ "Evaluer un trésor":["Expert","Pigeon"],"Premiers soins":["Secouriste","Bourreau"],"Cartographier":["Explorateur","Désorienté"],
+ "Mémoriser":["Hypermnésique","Amnésique"],"Naviguer":["Capitaine","Mousse"],"Plantes & Poisons":["Herboriste","Cueilleur"],
+ "Connaissance":["Puits de savoir","Abruti"],"Lire & Ecrire":["Lettré","Analphabète"],
+ "Eloquence":["Orateur","Bègue"],"Persuader":["Persuasif","Timoré"],"Charmer":["Dragueur","Effacé"],
+ "Marchander":["Négociateur","Arnaqué"],"Intimider":["Imposant","Victime"],"Instinct de la rue":["Débrouillard","Étranger"],
+ "Equilibre":["Funambule","Pas d'oreille interne"],"Ecouter":["Ouïe fine","Sourd"],"Sentir":["Nez fin","Nez bouché"],
+ "Chercher":["Sixième sens","Désordonné"],"Voir":["Oeil de lynx","Aveugle"],"Goûter":["Palais raffiné","Papilles anesthésiées"],
+ "Pister":["Chasseur","Scout"],
+ "Grimper":["Grimpeur","Vertige"],"Athlétisme":["Athlète","Gringalet"],"Sauter":["Ressort","Boiteux"],
+ "Equitation":["Cavalier","Equinophobie"],"Nager":["Dauphin","Enclume"],"Culbuter":["Acrobate","Domino"],"Lutte":["Lutteur","Mollasson"],
+ "Jongler":["Doigts de fée","Maladroit"],"Crocheter":["Serrurier","Manchot"],"Passe-passe":["Escamoteur","A la rue"],
+ "Faire un piège":["Chausse-trappe","Piégé"],"Faire un nœud":["Shibari","Pendu"],"Artisanat":["Artisan","Apprenti"],
+ "Embuscade":["Stratège","Fonceur"],"Dissimuler":["Mule","Etalage"],"Se cacher":["Maître du cache-cache","En pleine lumière"],
+ "Mouvement silencieux":["Ombre","Tintamarre"],"Déguisement":["Transformiste","Costumé"],
+};
+
+// ---- Arbres de combat --------------------------------------------------
+// stat: FOR ou DEX. group utilisé pour l'affichage.
+const WEAPON_BRANCHES = [
+ {id:"arcs",name:"Arcs",group:"Armes à distance",stat:"DEX",special:"Pluie mortelle : tire une flèche qui, au tour suivant, retombe en pluie (1D Arme de flèche)."},
+ {id:"arbaletes",name:"Arbalètes",group:"Armes à distance",stat:"DEX",special:"Rechargement rapide : permet de faire feu deux fois dans le round."},
+ {id:"lancers",name:"Lancers",group:"Armes à distance",stat:"DEX",special:"Eventail mortel : projection de trois munitions en cône."},
+ {id:"espadons",name:"Espadons",group:"Armes à deux mains",stat:"FOR",special:"Coup de taille : touche tous les adversaires placés devant."},
+ {id:"haches-armes",name:"Haches d'armes",group:"Armes à deux mains",stat:"FOR",special:"Frappe du bourreau : si le PJ achève un ennemi, il peut réattaquer."},
+ {id:"masses",name:"Masses",group:"Armes à deux mains",stat:"FOR",special:"Ecrasement : Infirmité (malus de 10 aux jets) et saignement (Dé d'arme puis 1 dé d'arme / round) pour l'ennemi touché."},
+ {id:"armes-hast",name:"Armes d'Hast",group:"Armes à deux mains",stat:"FOR",special:"Empalement : la prochaine attaque ignore l'armure de la cible."},
+ {id:"armes-improvisees",name:"Armes improvisées",group:"Armes diverses",stat:"DEX",special:"Armes surprenantes : l'adversaire offre toujours un round de surprise."},
+ {id:"armes-exotiques",name:"Armes exotiques",group:"Armes diverses",stat:"DEX",special:"Méconnaissance martiale : malus de 20 et incapacité à désarmer pour l'adversaire."},
+ {id:"mains-nues",name:"Combat à mains nues",group:"Armes diverses",stat:"FOR",special:"Réflexes vifs : offre une réussite automatique sur une esquive et une contre-attaque."},
+ {id:"lames-courtes",name:"Lames courtes",group:"Armes à une main",stat:"DEX",special:"Points vitaux : si l'adversaire est à moins de la moitié de ses PV ou surpris, il meurt. Sinon paralysé (1D Arme)."},
+ {id:"lames-moyennes",name:"Lames moyennes",group:"Armes à une main",stat:"FOR",special:"Duelliste : désigne un adversaire — les dégâts d'autres cibles sont ignorés tant que la cible ou le PJ sont vivants."},
+ {id:"contondantes",name:"Contondantes",group:"Armes à une main",stat:"FOR",special:"Brise-fer : l'arme, le bouclier ou la pièce d'armure touchée se brise."},
+];
+const ARMOR_BRANCHES = [
+ {id:"protections-legeres",name:"Protections légères",group:"Protections",items:"Armures légères, Boucliers légers"},
+ {id:"protections-intermediaires",name:"Protections intermédiaires",group:"Protections",items:"Armures intermédiaires, Boucliers intermédiaires"},
+ {id:"protections-lourdes",name:"Protections lourdes",group:"Protections",items:"Armures lourdes, Boucliers lourds"},
+];
+const DIE_RANKS = ["1d4","1d6","1d8","1d10","1d12","1d20","2d10","1d20+1d6","1d20+1d8","1d20+1d10"];
+
+// ---- Arbres de magie -----------------------------------------------------
+const MAGIC_SCHOOLS = [
+ {id:"destruction",name:"Destruction",alt:"École élémentaire",sub:["Feu","Air","Terre","Eau"],
+  desc:"Envoi d'éclairs, boules de feu, vagues, tourbillons… l'école offensive par excellence."},
+ {id:"conjuration",name:"Conjuration",alt:"École d'ailleurs",sub:["Invocation","Nécromancie","Démomancie","Elémancie"],
+  desc:"Fait venir des créatures et objets d'autres plans sur celui du lanceur de sort."},
+ {id:"guerison",name:"Guérison",alt:"École de la restauration",sub:["Anti-malédiction","Soins","Boucliers","Lumière divine"],
+  desc:"Soigner, restaurer, limiter les dégâts, et bannir les êtres n'ayant pas l'approbation divine."},
+ {id:"illusion",name:"Illusion",alt:"École factice",sub:["Invisibilité","Contrôle mental","Vision","Images psychiques"],
+  desc:"Modifie de façon factice le monde environnant — l'une des écoles les plus redoutables et capricieuses."},
+ {id:"metamorphose",name:"Métamorphose",alt:"École du changement",sub:["Terrestres","Aquatiques","Célestes","Humaines"],
+  desc:"Change l'apparence de son utilisateur ou d'un ennemi à sa guise."},
+ {id:"alteration",name:"Altération",alt:"École du renforcement",sub:["Statistiques","Poison","Armures","Dégâts"],
+  desc:"Rend plus ou moins puissant un personnage et son impact sur le jeu."},
+];
+const MAGIC_LEVEL_DICE = [[1,"1d6"],[3,"1d8"],[6,"1d10"],[9,"1d12"],[12,"1d20"],[15,"1d20+1d6"],[18,"1d20+1d8"]];
+
+// ---- Arcanes (pour Mage/Ensorceleur) ------------------------------------
+// restriction: null (les deux), "mage" ou "ensorceleur"
+const ARCANES = [
+ {id:"demoniaque",name:"Arcane démoniaque",archetype:"Démoniste",restriction:"ensorceleur",
+  bonus:"+10 de réussite à l'invocation/commandement de démon, octroie le parler démoniaque.",weakness:"Faiblesse aux sortilèges d'arcanes divines.",
+  flavor:"Les maîtres des arcanes démoniaques sont des sorciers qui frayent avec les puissances du Mal et du Chaos que sont les diables et les démons, et tirent de pactes avec eux leurs pouvoirs magiques inquiétants."},
+ {id:"draconique",name:"Arcane draconique",archetype:"Héritier Draconique",restriction:null,
+  bonus:"+10 d'armure naturelle quand le pouvoir est invoqué, octroie le parler draconique.",weakness:"Faiblesse aux arcanes runiques.",
+  flavor:"Les pratiquants de cette arcane antique et oubliée sont obsédés par la puissance physique, l'ancien règne des dragons, et le mystère des drakéides."},
+ {id:"elementaire",name:"Arcane élémentaire",archetype:"Élémancien",restriction:null,
+  bonus:"+10 de réussite à l'invocation/commandement d'élémentaires, octroie le parler élémentaire.",weakness:"Faiblesse aux arcanes druidiques.",
+  flavor:"Domaine réservé aux magiciens souples d'esprit, capables de tisser des pactes avec les élémentaires de tout genre malgré leurs caprices."},
+ {id:"necromantique",name:"Arcane nécromantique",archetype:"Nécromancien",restriction:null,
+  bonus:"+10 de réussite aux résurrections/invocations de morts, création de phylactère possible.",weakness:"Faiblesse aux arcanes cataclysmiques.",
+  flavor:"L'une des plus dangereuses pour la santé mentale de son utilisateur : commander aux morts n'est jamais chose aisée."},
+ {id:"runique",name:"Arcane runique",archetype:"Runesort",restriction:"mage",
+  bonus:"Apposition de runes sans la compétence Artisanat correspondante, lecture des runes.",weakness:"Faiblesse aux arcanes télépathiques.",
+  flavor:"La science des runes est aussi ancienne que les premiers langages, capable de plier la magie autour des objets."},
+ {id:"druidique",name:"Arcane druidique",archetype:"Druidomancien",restriction:null,
+  bonus:"Sorts sur la faune et la flore facilités de +10, langage animal.",weakness:"Faiblesse à l'arcane invocatrice.",
+  flavor:"Certains magiciens solitaires partent en ermite à la recherche de la magie la plus naturelle et la plus pure, sans pour autant embrasser la carrière de druide."},
+ {id:"divine",name:"Arcane divine",archetype:"Théomancien",restriction:"mage",
+  bonus:"Sort de Guérison +1 dé, vision prophétique, création de golem facilitée.",weakness:"Faiblesse à l'arcane nécromantique.",
+  flavor:"Les pratiquants de cette branche sont la preuve vivante que magie et religion peuvent faire bon ménage."},
+ {id:"telepathique",name:"Arcane télépathique",archetype:"Mentaliste",restriction:"ensorceleur",
+  bonus:"+10 pour les sortilèges de lévitation, de télékinésie et de télépathie, détection de la magie.",weakness:"Faiblesse à l'arcane astrale.",
+  flavor:"Cherchant à démontrer l'importance du mental et de la puissance de l'esprit comme catalyseur de la magie."},
+ {id:"invocatrice",name:"Arcane invocatrice",archetype:"Invocateur",restriction:null,
+  bonus:"+10 à l'invocation animale, lecture des cercles d'invocation.",weakness:"Faiblesse à l'arcane cataclysmique.",
+  flavor:"Généralement emplis de passion pour le règne animal et les habitants des autres plans, capables d'invoquer des légions de créatures."},
+ {id:"cataclysmique",name:"Arcane cataclysmique",archetype:"Évocateur",restriction:"ensorceleur",
+  bonus:"+1 dé aux sortilèges de destruction, octroie le parler élémentaire.",weakness:"Faiblesse à l'arcane démoniaque.",
+  flavor:"De tous les pratiquants, les plus destructeurs et les plus incontrôlables, ravageant tout sur leur passage à l'aide de l'eau, du feu, de l'air et de la terre."},
+ {id:"illusionniste",name:"Arcane d'illusionniste",archetype:"Prestidigitateur",restriction:null,
+  bonus:"Durée des illusions +1 dé, détection des illusions.",weakness:"Faiblesse face à l'arcane scriptique.",
+  flavor:"Manipulant leurs adversaires en leur faisant voir ce qu'ils désirent, désagréables à prendre en duel."},
+ {id:"astrale",name:"Arcane astrale",archetype:"Astromancien",restriction:null,
+  bonus:"Sortilèges de nuit +1 dé, vision nocturne, +10 en Connaissance (Astronomie).",weakness:"Faiblesse à l'arcane d'illusion.",
+  flavor:"Tirant leur pouvoir des étoiles elles-mêmes, influencés par les cycles de la Lune et le mouvement de la voûte céleste."},
+ {id:"scriptique",name:"Arcane Scriptique",archetype:"Scribomancien",restriction:"mage",
+  bonus:"Lecture de la magie, écriture de parchemin facilitée, sort issu de parchemins et de grimoire +1 dé.",weakness:"Faiblesse à l'arcane télépathique.",
+  flavor:"S'attachent à toutes les formes de magie écrite : avec eux, les parchemins sont de véritables armes."},
+];
+
+// ---- Religions : dieux, cultes et oraisons/ordalies de prêtre --------------
+const RELIGIONS = [
+ {culture:"Chez les humains", deities:[
+  {id:"aldar",name:"Aldar",domaine:"Justice et honneur",align:"Loyal, Neutre",oraison:"Une bénédiction capable de régler instantanément un conflit : la cible se calme."},
+  {id:"hemos",name:"Hémos",domaine:"Guerre et force",align:"Loyal, Mauvais",oraison:"Bénédiction d'une arme qui percera l'armure ennemie."},
+  {id:"vega",name:"Véga",domaine:"Chasse et Nature",align:"Neutre, Bon",oraison:"Prière apposant la marque du chasseur à un ennemi : dégâts doublés contre lui ce tour."},
+  {id:"darion",name:"Darion",domaine:"Désastre et paresse",align:"Neutre, Mauvais",oraison:"Prière créant un évènement catastrophique d'ampleur variable à proximité."},
+  {id:"legius",name:"Legius",domaine:"Forge et tactique",align:"Neutre",oraison:"Prière permettant d'obtenir le temps d'un jet une des maîtrises d'Artisanat."},
+  {id:"naphirya",name:"Naphirya",domaine:"Destruction et colère",align:"Chaotique, Mauvais",oraison:"Créer une furie hystérique dans les rangs des ennemis."},
+  {id:"nelia",name:"Nélia",domaine:"Soleil et guérison",align:"Loyal, Bon",oraison:"Fait naître le soleil et calme le climat, octroyant 1d4 points de vie au groupe."},
+  {id:"nastilia",name:"Nastilia",domaine:"Lune et maladie",align:"Chaotique, Neutre",oraison:"Transfère la souffrance et la maladie d'un personnage sur le prêtre."},
+  {id:"emori",name:"Emori",domaine:"Beauté et musique",align:"Neutre, Bon",oraison:"Confère l'inspiration pour une œuvre à la cible ; octroie un jet réussi automatique de représentation."},
+  {id:"oton",name:"Oton",domaine:"Laideur et luxure",align:"Chaotique, Mauvais",oraison:"Octroie un jet de Communication réussi."},
+  {id:"jiyn",name:"Jiyn",domaine:"Rêves et voyages",align:"Neutre",oraison:"Permet de bénir une journée de voyage la rendant sans danger."},
+  {id:"helzarya",name:"Helzarya",domaine:"Cauchemar et égarement",align:"Chaotique, Mauvais",oraison:"Produit des visions cauchemardesques chez la cible, provoquant sa panique."},
+  {id:"perantis",name:"Pérantis",domaine:"Magie et connaissances",align:"Neutre, Bon",oraison:"Délivre un fragment de savoir, la réponse à une question (hors avenir)."},
+  {id:"mordred",name:"Mordred",domaine:"Secrets et tromperie",align:"Chaotique, Neutre",oraison:"Détecte un mensonge et révèle la vérité au prêtre de Mordred."},
+  {id:"anthias",name:"Anthias",domaine:"Liberté et bière",align:"Chaotique, Neutre",oraison:"Lève ou installe la gueule de bois."},
+  {id:"melina",name:"Mélina",domaine:"Poison et folie",align:"Chaotique, Mauvais",oraison:"Rend fou une cible pour la journée."},
+  {id:"vandred",name:"Vandred",domaine:"Climat et mer",align:"Chaotique, Neutre",oraison:"Prière invoquant un cyclone destructeur."},
+  {id:"karkak",name:"Karkak",domaine:"Profondeurs et haine",align:"Chaotique, Mauvais",oraison:"Double les dégâts d'une cible sur une autre en fonction de leur haine naturelle."},
+  {id:"idalis",name:"Idalis",domaine:"Marchands et Richesse",align:"Chaotique, Bon",oraison:"Octroie une réussite automatique sur le Marchandage et l'évaluation d'un trésor."},
+  {id:"clavern",name:"Clavern",domaine:"Pauvreté et meurtre",align:"Loyal, Mauvais",oraison:"Permet de convoquer un assassin à la solde de Clavern."},
+ ]},
+ {culture:"Cultes monothéistes anciens", deities:[
+  {id:"as",name:"As",domaine:"Créateur des dieux et des mortels (retiré)",align:"—",oraison:"Permet une réussite automatique d'un jet."},
+  {id:"mon",name:"Mön",domaine:"Mort et grandes ténèbres",align:"—",oraison:"Permet l'échec instantané d'un dé."},
+ ]},
+ {culture:"Chez les orcs (culte des ancêtres)", deities:[
+  {id:"orc-martyr",name:"Oraison du martyr",domaine:"Le héros mort seul face aux ennemis",align:"—",oraison:"Inflige des dégâts doublés tant que les ennemis surpassent en nombre les alliés, et que le prêtre est vivant."},
+  {id:"orc-sanguinaire",name:"Oraison sanguinaire",domaine:"Le héros furieux aux carnages démentiels",align:"—",oraison:"Confère au groupe +1 dégât par PV manquant."},
+  {id:"orc-protecteur",name:"Oraison du protecteur",domaine:"Le héros brave ayant tout fait pour sa communauté",align:"—",oraison:"Peut rediriger des dégâts sur un compagnon, tout en les réduisant de moitié."},
+  {id:"orc-ruse",name:"Oraison du rusé",domaine:"Le héros supérieur par son intellect",align:"—",oraison:"Réussite automatique d'une embuscade."},
+ ]},
+ {culture:"Chez les gobelins", deities:[
+  {id:"gobelin-vie",name:"Divinité de la vie, du mouvement et du feu",domaine:"Rites tribaux",align:"—",oraison:"Rite de transcendance : bonus de +5 sur l'action de son choix."},
+ ]},
+ {culture:"Chez les elfes", deities:[
+  {id:"lamalias",name:"Lama'lias",domaine:"Dieu multiface (nature)",align:"Change selon la saison",oraison:"Guérit 1d6 au groupe au printemps/été, inflige 1d6 poison en automne/hiver."},
+  {id:"edolon",name:"Edolon",domaine:"Le Ciel Père",align:"Chaotique, Bon",oraison:"Prière générant la météo de son choix."},
+  {id:"amatis",name:"Amatis",domaine:"La Terre Mère",align:"Loyal, Bon",oraison:"Prière calmant la folie et l'emportement."},
+  {id:"jelemir",name:"Jelemir",domaine:"Le Chaos océanique",align:"Chaotique, Neutre",oraison:"Prière permettant de respirer sous l'eau."},
+ ]},
+ {culture:"Chez les nains", deities:[
+  {id:"gabrok",name:"Gabrok",domaine:"Dieu de la Fournaise",align:"Chaotique, Bon",oraison:"Prière octroyant le caractère ignifuge au groupe."},
+  {id:"berli",name:"Berli",domaine:"Dieu de l'Art",align:"Loyal, Neutre",oraison:"Le prochain jet d'Artisanat, quel qu'en soit le domaine, est réussi automatiquement."},
+  {id:"pudoc",name:"Pudoc",domaine:"Dieu de la Terre",align:"Loyal, Bon",oraison:"Octroie la vision nocturne à tout le groupe."},
+  {id:"kadok",name:"Kadok",domaine:"Dieu de l'Ingéniosité",align:"Chaotique, Bon",oraison:"Un jet de Connaissance gratuit sur n'importe quel domaine."},
+  {id:"saldur",name:"Saldur",domaine:"L'Ombre d'en-bas",align:"Chaotique, Mauvais",oraison:"Bonus de +20 sur tous les jets à l'encontre d'un nain, avec dégâts doublés."},
+ ]},
+ {culture:"Chez les drakéides", deities:[
+  {id:"darahal",name:"Darahal",domaine:"Dieu Originel",align:"Neutre",oraison:"Souffle de drakéide illimité, armure naturelle +10."},
+ ]},
+ {culture:"Autres croyances (ordalies, sans dieu nommé)", deities:[
+  {id:"princes-demons",name:"Princes Démons",domaine:"Secte démomancienne",align:"—",oraison:"Le niveau de lanceur de sort double pour l'invocation de démon, donnant accès à des invocations plus puissantes."},
+  {id:"seigneurs-mort",name:"Seigneurs de la Mort",domaine:"Secte nécromancienne",align:"—",oraison:"Le niveau de lanceur de sort double pour l'invocation de démon, donnant accès à des invocations plus puissantes. (Texte identique à celui des Princes Démons dans le livre — probable coquille d'origine.)"},
+ ]},
+];
+
+// ---- Classes sociales (or de départ) -------------------------------------
+const SOCIAL_CLASSES = [
+ {id:"pauvre",name:"Pauvre",salary:200},
+ {id:"moyenne",name:"Classe moyenne",salary:400},
+ {id:"bourgeoise",name:"Bourgeoise",salary:1000},
+ {id:"superieure",name:"Classe supérieure",salary:2000},
+];
+
+// ---- Langues --------------------------------------------------------------
+const LANGUAGES = {
+ courantes:["Le Commun","L'Aerda commun","Le Pudson (nain)","Le Gabbrish (gnome)","L'Orc","Babil (gobelin)"],
+ anciennes:["Draconique Ancien","Haut-elfique","Le Courtois","L'Ancien"],
+ diverses:["Aviaire","Terrestre","Aquatique","Igné","Terreux","Aérien","Aqueux","Infernal","Divin","Sylvestre","Gallisien","Profond"],
+};
+
+window.ADA.DATA = {STATS,STAT_LABELS,RACES,CLASSES_BASE,CLASSES_SPECIAL,SKILL_CATEGORIES,CATEGORY_STAT,
+ NATURAL_TRAITS,WEAPON_BRANCHES,ARMOR_BRANCHES,DIE_RANKS,MAGIC_SCHOOLS,MAGIC_LEVEL_DICE,ARCANES,SOCIAL_CLASSES,LANGUAGES,RELIGIONS};
+})();
+</script>
+<script>
+/* =====================================================================
+   MOTEUR DE L'ASSISTANT DE CRÉATION
+   ===================================================================== */
+(function(){
+"use strict";
+const D = window.ADA.DATA;
+const ALL_WEAPON_BRANCHES = D.WEAPON_BRANCHES.concat(D.ARMOR_BRANCHES);
+const $ = (sel,root)=> (root||document).querySelector(sel);
+const $$ = (sel,root)=> Array.from((root||document).querySelectorAll(sel));
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function freshState(){
+  return {
+    identity:{name:"",player:"",align:"",eyes:"",hair:"",height:"",desc:""},
+    raceId:null, raceChoiceBonuses:[],
+    classMainId:null, classSecondaryId:null,
+    arcaneMain:null, deityId:null, guerrierWeaponId:null,
+    rolls:[], rollUsed:[], statRollIndex:{FOR:null,CON:null,INT:null,DEX:null,CHA:null,CHANCE:null},
+    civil:{}, // "Compétence": points
+    traitFree:null, traitPairs:[], // [{pos:"Skill",neg:"Skill"}]
+    weaponStatChoice:"FOR",
+    weapon:{ branches:{} }, // id -> {unlocked,mastery,chances,de,crit}
+    magicStatChoice:"INT",
+    magic:{ schools:{} }, // subId -> {unlocked,mastery}
+    socialClassId:"moyenne",
+    languages:[],
+    equipmentText:"", historyText:"",
+    step:0,
+  };
+}
+let state = loadState() || freshState();
+function saveState(){ try{ localStorage.setItem("ada_char_v1", JSON.stringify(state)); }catch(e){} }
+function loadState(){ try{ const s=localStorage.getItem("ada_char_v1"); return s?JSON.parse(s):null; }catch(e){ return null; } }
+
+/* ---------- helpers de calcul ---------- */
+function mod(v){ return Math.floor((v-10)/2); }
+function getRace(){ return D.RACES.find(r=>r.id===state.raceId); }
+function getClass(id){ return D.CLASSES_BASE.concat(D.CLASSES_SPECIAL).find(c=>c.id===id); }
+function getArcane(id){ return D.ARCANES.find(a=>a.id===id); }
+function getDeity(id){ for(const cult of D.RELIGIONS){ const d=cult.deities.find(x=>x.id===id); if(d) return Object.assign({culture:cult.culture},d); } return null; }
+function hasClass(id){ return state.classMainId===id || state.classSecondaryId===id; }
+function statBase(stat){ const i=state.statRollIndex[stat]; return (i!=null && state.rolls[i]!=null) ? state.rolls[i] : null; }
+function statFinal(stat){
+  const base = statBase(stat);
+  if(base==null) return null;
+  let addTotal=0, multFactor=1;
+  const race=getRace();
+  if(race){ race.bonus.concat(race.malus).forEach(b=>{ if(b.stat!==stat) return;
+    if(b.op==="mult") multFactor*=b.val; else if(b.op==="div") multFactor/=b.val; else addTotal+=b.val; }); }
+  (state.raceChoiceBonuses||[]).forEach(s=>{ if(s===stat) addTotal+=1; });
+  return Math.round((base+addTotal)*multFactor);
+}
+function statModFinal(stat){ const v=statFinal(stat); return v==null?null:mod(v); }
+function civilBudget(cat){ const v=statFinal(D.CATEGORY_STAT[cat]); if(v==null) return 0; return Math.max(0,v)*6; }
+function civilSpent(cat){ return D.SKILL_CATEGORIES[cat].reduce((s,sk)=> s+(state.civil[sk]||0),0); }
+function weaponPoolBase(){ const m=statModFinal(state.weaponStatChoice); return m==null?0:Math.max(1,m); }
+function weaponArbrePoints(){ return weaponPoolBase(); }
+function weaponMasteryPoints(){ return weaponPoolBase()*5; }
+function magicPoolBase(){ const m=statModFinal(state.magicStatChoice); return m==null?0:Math.max(1,m); }
+function magicArbrePoints(){ return magicPoolBase(); }
+function magicMasteryPoints(){ return magicPoolBase()*5; }
+
+function weaponArbreSpent(){
+  let n=0;
+  Object.values(state.weapon.branches).forEach(b=>{ if(b.unlocked) n+=1; n += (b.chances||0)+(b.de||0)+(b.crit||0); });
+  return n;
+}
+function weaponMasterySpent(){ return Object.values(state.weapon.branches).reduce((s,b)=> s+(b.mastery||0),0); }
+function magicArbreSpent(){ return Object.values(state.magic.schools).filter(b=>b.unlocked).length; }
+function magicMasterySpent(){ return Object.values(state.magic.schools).reduce((s,b)=> s+(b.mastery||0),0); }
+
+function pvValue(){ const f=statFinal("FOR"), c=statFinal("CON"); if(f==null||c==null) return null; return Math.round((f+c)/2); }
+function goldStart(){ const sc=D.SOCIAL_CLASSES.find(s=>s.id===state.socialClassId); if(!sc) return 0; return Math.min(1000, Math.floor(sc.salary/2)); }
+function languageCount(){ const m=statModFinal("INT"); if(m==null) return 1; return Math.max(0,m)+1; }
+
+function traitBonuses(){ // renvoie map skill -> total bonus des traits naturels choisis
+  const map={};
+  if(state.traitFree){ map[state.traitFree.skill]=(map[state.traitFree.skill]||0)+10; }
+  (state.traitPairs||[]).forEach(p=>{ map[p.pos]=(map[p.pos]||0)+10; map[p.neg]=(map[p.neg]||0)-10; });
+  return map;
+}
+function racialSkillNote(){ return getRace() ? getRace().traits : []; }
+
+// Bonus fixes et inconditionnels issus des traits raciaux et des dons de classe (passif + niveau 1
+// uniquement, puisque le personnage est créé au niveau 1). Les bonus conditionnels/contextuels du
+// livre (ex. "en forêt", "avec les nains") restent affichés en texte dans les traits mais ne sont
+// PAS ajoutés au score, pour ne pas fausser la valeur permanente de la compétence.
+function fixedSkillSources(){
+  const sources=[]; // {label, skill, amount}
+  function addFrom(entity, label){
+    if(!entity || !entity.skillBonuses) return;
+    entity.skillBonuses.forEach(b=>{
+      if(b.skill){ sources.push({label, skill:b.skill, amount:b.amount}); }
+      else if(b.category){ (D.SKILL_CATEGORIES[b.category]||[]).forEach(sk=> sources.push({label, skill:sk, amount:b.amount})); }
+    });
+  }
+  addFrom(getRace(), "race");
+  addFrom(getClass(state.classMainId), "classe");
+  addFrom(getClass(state.classSecondaryId), "classe 2nd");
+  return sources;
+}
+function fixedSkillBonuses(){
+  const map={};
+  fixedSkillSources().forEach(s=>{ map[s.skill]=(map[s.skill]||0)+s.amount; });
+  return map;
+}
+// Combine bonus fixes (race/classe) + traits naturels choisis -> total par compétence, avec détail des sources.
+function allSkillBonuses(){
+  const map={}; // skill -> {total, parts:[{label,amount}]}
+  function add(skill,amount,label){
+    if(!map[skill]) map[skill]={total:0, parts:[]};
+    map[skill].total += amount; map[skill].parts.push({label,amount});
+  }
+  fixedSkillSources().forEach(s=> add(s.skill, s.amount, s.label));
+  if(state.traitFree) add(state.traitFree.skill, 10, "trait");
+  (state.traitPairs||[]).forEach(p=>{ add(p.pos, 10, "trait"); add(p.neg, -10, "trait"); });
+  return map;
+}
+
+/* ---------- dés ---------- */
+function d6(){ return 1+Math.floor(Math.random()*6); }
+function roll4d6drop(){ const r=[d6(),d6(),d6(),d6()]; const sorted=[...r].sort((a,b)=>a-b); const dropped=sorted[0];
+  const kept=[...r]; const di=kept.indexOf(dropped); kept.splice(di,1);
+  return {all:r, dropIndex:di, total:kept.reduce((a,b)=>a+b,0)}; }
+
+/* ---------- steps ---------- */
+const STEPS = [
+ {id:"identite", num:"I", label:"Identité, race & classe"},
+ {id:"carac", num:"II", label:"Caractéristiques"},
+ {id:"competences", num:"III", label:"Compétences civiles"},
+ {id:"traits", num:"IV", label:"Traits naturels"},
+ {id:"combat", num:"V", label:"Arbre de combat"},
+ {id:"magie", num:"VI", label:"Arbre de magie"},
+ {id:"vie", num:"VII", label:"Points de vie & or"},
+ {id:"fiche", num:"VIII", label:"Équipement & fiche finale"},
+];
+
+function go(i){ state.step=Math.max(0,Math.min(STEPS.length-1,i)); saveState(); window.ADA.renderAll(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+/* ---------- rendu : rail ---------- */
+function renderRail(){
+  const rail=$("#rail");
+  rail.innerHTML = STEPS.map((s,i)=>{
+    const done = i<state.step;
+    return `<button data-i="${i}" class="${done?'done':''}" ${i===state.step?'aria-current="step"':''}>
+      <span class="num">${s.num}</span><span class="lbl">${esc(s.label)}</span>
+    </button>`;
+  }).join("");
+  $$("#rail button").forEach(b=> b.addEventListener("click", ()=> go(parseInt(b.dataset.i,10))));
+}
+
+/* ---------- rendu : résumé latéral ---------- */
+function renderSummary(){
+  const root=$("#summaryRoot");
+  const race=getRace(), cls=getClass(state.classMainId), cls2=getClass(state.classSecondaryId);
+  const pv=pvValue(), gold=goldStart();
+  root.innerHTML = `
+   <div class="sumcard">
+     <div class="name">${esc(state.identity.name||"Sans nom")}</div>
+     <div class="sub">${race?esc(race.name):"Race non choisie"} ${cls?" · "+esc(cls.name):""}${cls2?" / "+esc(cls2.name):""}</div>
+     <div class="pillrow">
+       ${state.identity.align?`<span class="badge">${esc(state.identity.align)}</span>`:""}
+       ${pv!=null?`<span class="badge pos">PV ${pv}</span>`:""}
+       <span class="badge">Or ${gold} PO</span>
+     </div>
+     <div class="mini-stats">
+      ${D.STATS.map(s=>{const v=statFinal(s); return `<div><b>${v==null?"–":v}</b>${s}</div>`;}).join("")}
+     </div>
+   </div>
+   <div class="sumcard">
+     <h3>Progression</h3>
+     <div class="pillrow">
+       ${STEPS.map((s,i)=>`<span class="badge ${i<state.step?'pos':''}">${s.num}</span>`).join("")}
+     </div>
+   </div>
+   <div class="sumcard no-print">
+     <h3>Export</h3>
+     <p style="font-size:.82rem;color:var(--ink-soft);margin:0 0 .6rem">Va à l'étape VIII pour imprimer / exporter la fiche en PDF.</p>
+     <button class="btn secondary small" id="jumpFiche">Aller à la fiche</button>
+   </div>`;
+  const jb=$("#jumpFiche"); if(jb) jb.addEventListener("click", ()=>go(7));
+}
+
+/* ---------- STEP 1 : identité, race, classe ---------- */
+function renderStep1(root){
+  const race=getRace();
+  root.innerHTML = `
+   <div class="step-head"><div><div class="eyebrow">Chapitre I</div><h2>Identité, race &amp; classe</h2></div></div>
+   <div class="grid2">
+     <div class="field"><label>Nom du personnage</label><input id="f-name" value="${esc(state.identity.name)}"></div>
+     <div class="field"><label>Nom du joueur</label><input id="f-player" value="${esc(state.identity.player)}"></div>
+     <div class="field"><label>Alignement</label><input id="f-align" placeholder="ex. Loyal Bon" value="${esc(state.identity.align)}"></div>
+     <div class="field"><label>Taille</label><input id="f-height" value="${esc(state.identity.height)}"></div>
+     <div class="field"><label>Yeux</label><input id="f-eyes" value="${esc(state.identity.eyes)}"></div>
+     <div class="field"><label>Cheveux</label><input id="f-hair" value="${esc(state.identity.hair)}"></div>
+   </div>
+
+   <h3 style="margin-top:1.4rem">Race</h3>
+   <div class="pick-grid" id="race-grid">
+     ${D.RACES.map(r=>`<div class="card-pick ${state.raceId===r.id?'selected':''}" data-race="${r.id}">
+        <h4>${esc(r.name)}</h4><p>${esc(r.desc)}</p>
+        <p style="margin-top:.3rem"><small class="help">${r.bonus.map(b=>fmtBonus(b)).join(", ")||"—"} ${r.malus.length?(" / "+r.malus.map(b=>fmtBonus(b)).join(", ")):""}${r.choice?`, +1 au choix x${r.choice}`:""}</small></p>
+      </div>`).join("")}
+   </div>
+   ${race? renderRaceDetail(race) : ""}
+
+   <h3 style="margin-top:1.6rem">Classe principale</h3>
+   <div class="pick-grid">
+     ${D.CLASSES_BASE.map(c=>`<div class="card-pick ${state.classMainId===c.id?'selected':''}" data-classmain="${c.id}">
+        <h4>${esc(c.name)}</h4><p>${esc(c.tagline)}</p></div>`).join("")}
+   </div>
+   ${state.classMainId? renderClassDetail(getClass(state.classMainId)) : ""}
+
+   <h3 style="margin-top:1.6rem">Classe secondaire <small class="help">(optionnel — obtenue via un changement de voie à un passage de niveau)</small></h3>
+   <div class="pick-grid">
+     <div class="card-pick ${!state.classSecondaryId?'selected':''}" data-classsec="">
+       <h4>Aucune</h4><p>Se concentrer sur la classe principale.</p></div>
+     ${D.CLASSES_BASE.concat(D.CLASSES_SPECIAL).filter(c=>c.id!==state.classMainId).map(c=>`<div class="card-pick ${state.classSecondaryId===c.id?'selected':''}" data-classsec="${c.id}">
+        <h4>${esc(c.name)}</h4><p>${esc(c.tagline)}</p></div>`).join("")}
+   </div>
+
+   ${(state.classMainId==="guerrier"||state.classSecondaryId==="guerrier")?`
+   <h3 style="margin-top:1.6rem">Arme de prédilection <small class="help">(passif Guerrier : +10 de maîtrise sur une arme choisie)</small></h3>
+   <div class="field"><label>Branche d'arme</label>
+     <select id="f-guerrierweapon"><option value="">— choisir —</option>
+       ${D.WEAPON_BRANCHES.map(b=>`<option value="${b.id}" ${state.guerrierWeaponId===b.id?"selected":""}>${esc(b.name)} (${b.group})</option>`).join("")}
+     </select></div>`:""}
+
+   ${(state.classMainId==="mage"||state.classMainId==="ensorceleur"||state.classSecondaryId==="mage"||state.classSecondaryId==="ensorceleur")?(()=>{
+     const wantsMage = state.classMainId==="mage"||state.classSecondaryId==="mage";
+     const wantsEnso = state.classMainId==="ensorceleur"||state.classSecondaryId==="ensorceleur";
+     const avail = D.ARCANES.filter(a=> a.restriction===null || (wantsMage&&a.restriction==="mage") || (wantsEnso&&a.restriction==="ensorceleur"));
+     const chosen = getArcane(state.arcaneMain);
+     return `<h3 style="margin-top:1.6rem">Arcane</h3>
+     <div class="field"><label>Arcane choisie (mage/ensorceleur, niveau 1)</label>
+       <select id="f-arcane"><option value="">— choisir —</option>
+         ${avail.map(a=>`<option value="${a.id}" ${state.arcaneMain===a.id?"selected":""}>${esc(a.name)} — ${esc(a.archetype)}${a.restriction?` (réservé aux ${a.restriction==="mage"?"mages":"ensorceleurs"})`:""}</option>`).join("")}
+       </select></div>
+       ${chosen?`<div class="note"><b>${esc(chosen.name)}</b> — ${esc(chosen.archetype)}<br>${esc(chosen.bonus)} ${esc(chosen.weakness)}<br><small class="help">${esc(chosen.flavor)}</small></div>`:""}`;
+   })():""}
+
+   ${(state.classMainId==="pretre"||state.classSecondaryId==="pretre")?(()=>{
+     const chosen = getDeity(state.deityId);
+     return `<h3 style="margin-top:1.6rem">Divinité / ordalie vénérée <small class="help">(détermine l'oraison de prêtre gratuite)</small></h3>
+     <div class="field"><label>Culte</label>
+       <select id="f-deity"><option value="">— choisir —</option>
+         ${D.RELIGIONS.map(cult=>`<optgroup label="${esc(cult.culture)}">${cult.deities.map(d=>`<option value="${d.id}" ${state.deityId===d.id?"selected":""}>${esc(d.name)}</option>`).join("")}</optgroup>`).join("")}
+       </select></div>
+       ${chosen?`<div class="note"><b>${esc(chosen.name)}</b> — ${esc(chosen.domaine)} ${chosen.align&&chosen.align!=="—"?`(${esc(chosen.align)})`:""}<br><i>Oraison de prêtre :</i> ${esc(chosen.oraison)}</div>`:""}`;
+   })():""}
+
+   <div class="field" style="margin-top:1rem"><label>Description / concept</label>
+     <textarea id="f-desc" rows="3" placeholder="Qui est-il, d'où vient-il, que cherche-t-il...">${esc(state.identity.desc)}</textarea></div>
+
+   <div class="step-foot no-print"><span></span><button class="btn" id="next1">Étape suivante →</button></div>`;
+
+  $("#f-name").addEventListener("input", e=>{state.identity.name=e.target.value; saveState(); renderSummary();});
+  $("#f-player").addEventListener("input", e=>{state.identity.player=e.target.value; saveState();});
+  $("#f-align").addEventListener("input", e=>{state.identity.align=e.target.value; saveState(); renderSummary();});
+  $("#f-height").addEventListener("input", e=>{state.identity.height=e.target.value; saveState();});
+  $("#f-eyes").addEventListener("input", e=>{state.identity.eyes=e.target.value; saveState();});
+  $("#f-hair").addEventListener("input", e=>{state.identity.hair=e.target.value; saveState();});
+  $("#f-desc").addEventListener("input", e=>{state.identity.desc=e.target.value; saveState();});
+  const fa=$("#f-arcane"); if(fa) fa.addEventListener("change", e=>{state.arcaneMain=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
+  const fd=$("#f-deity"); if(fd) fd.addEventListener("change", e=>{state.deityId=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
+  const fw=$("#f-guerrierweapon"); if(fw) fw.addEventListener("change", e=>{state.guerrierWeaponId=e.target.value||null; saveState(); renderSummary();});
+  $$("#race-grid .card-pick").forEach(el=> el.addEventListener("click", ()=>{ state.raceId=el.dataset.race; state.raceChoiceBonuses=[]; saveState(); renderStep1(root); renderSummary(); }));
+  $$("[data-classmain]").forEach(el=> el.addEventListener("click", ()=>{ state.classMainId=el.dataset.classmain||null; saveState(); renderStep1(root); renderSummary(); }));
+  $$("[data-classsec]").forEach(el=> el.addEventListener("click", ()=>{ state.classSecondaryId=el.dataset.classsec||null; saveState(); renderStep1(root); renderSummary(); }));
+  $("#next1").addEventListener("click", ()=>go(1));
+}
+function fmtBonus(b){
+  const lbl=b.stat;
+  if(b.op==="mult") return `x${b.val} ${lbl}`;
+  if(b.op==="div") return `/${b.val} ${lbl}`;
+  return `${b.val>0?"+":""}${b.val} ${lbl}`;
+}
+function renderRaceDetail(race){
+  return `<div class="note"><b>${esc(race.name)}</b> — ${race.traits.map(esc).join(" · ")}
+   ${race.choice?`<div style="margin-top:.6rem">Choisissez ${race.choice} caractéristique(s) à augmenter de +1 :
+     ${D.STATS.map(s=>`<label style="margin-right:.8rem"><input type="checkbox" data-choicebonus="${s}" ${state.raceChoiceBonuses.includes(s)?"checked":""}> ${s}</label>`).join("")}
+   </div>`:""}
+   </div>`;
+}
+function renderClassDetail(c){
+  return `<div class="note"><b>${esc(c.name)}</b><br>
+    <b>Niveau 1 :</b> ${esc(c.n1)}<br>
+    ${c.n3?`<b>Niveau 3 :</b> ${esc(c.n3)}<br>`:""}
+    ${c.n5?`<b>Niveau 5 :</b> ${esc(c.n5)}<br>`:""}
+    ${c.n10?`<b>Niveau 10 :</b> ${esc(c.n10)}<br>`:""}
+    <b>Passif :</b> ${esc(c.passif)}</div>`;
+}
+
+/* attach choice-bonus checkboxes after step1 render (delegated) */
+document.addEventListener("change", e=>{
+  if(e.target.matches("[data-choicebonus]")){
+    const s=e.target.dataset.choicebonus; const race=getRace(); if(!race) return;
+    const max=race.choice||0;
+    if(e.target.checked){
+      if(state.raceChoiceBonuses.length>=max){ e.target.checked=false; return; }
+      state.raceChoiceBonuses.push(s);
+    } else { state.raceChoiceBonuses=state.raceChoiceBonuses.filter(x=>x!==s); }
+    saveState(); renderSummary();
+  }
+});
+
+window.ADA.core = {D,ALL_WEAPON_BRANCHES,$,$$,esc,state,saveState,mod,getRace,getClass,getArcane,getDeity,hasClass,statBase,statFinal,statModFinal,
+ civilBudget,civilSpent,weaponPoolBase,weaponArbrePoints,weaponMasteryPoints,weaponArbreSpent,weaponMasterySpent,
+ magicPoolBase,magicArbrePoints,magicMasteryPoints,magicArbreSpent,magicMasterySpent,pvValue,goldStart,languageCount,
+ traitBonuses,racialSkillNote,fixedSkillSources,fixedSkillBonuses,allSkillBonuses,d6,roll4d6drop,STEPS,go,renderRail,renderSummary,renderStep1,fmtBonus};
+})();
+</script>
+<script>
+/* =====================================================================
+   ÉTAPES 2 à 8
+   ===================================================================== */
+(function(){
+"use strict";
+const core = window.ADA.core, D=core.D, $=core.$, $$=core.$$, esc=core.esc;
+function state(){ return core.state; }
+
+/* ---------- STEP 2 : caractéristiques ---------- */
+function renderStep2(root){
+  const s=core.state;
+  let manualOpen=false;
+  root.innerHTML = `
+   <div class="step-head"><div><div class="eyebrow">Chapitre I bis</div><h2>Caractéristiques</h2></div>
+     <div class="no-print" style="display:flex;gap:.5rem;flex-wrap:wrap">
+       <button class="btn secondary small" id="rollAll">🎲 Lancer les 6 caractéristiques (4d6, retire le plus faible)</button>
+       <button class="btn ghost small" id="manualToggle">✍️ Saisir mes jets manuellement</button>
+     </div></div>
+   <p class="help" style="color:var(--ink-soft)">Assignez chaque résultat obtenu à l'une des six caractéristiques. Le bonus/malus racial et vos choix libres sont appliqués automatiquement.</p>
+   <div id="manualPanel" class="no-print" style="display:none;margin-bottom:1.1rem;border:1px solid var(--border);border-radius:8px;padding:.9rem 1rem;background:var(--surface-2)"></div>
+   <div id="rollsRow" class="dice-row" style="margin-bottom:1.1rem"></div>
+   <div class="stat-grid" id="statGrid"></div>
+   <div class="step-foot no-print"><button class="btn secondary" id="prev2">← Précédent</button><button class="btn" id="next2">Étape suivante →</button></div>`;
+
+  function paintManualPanel(){
+    const panel=$("#manualPanel");
+    panel.style.display = manualOpen?"":"none";
+    if(!manualOpen) return;
+    const vals = Array.from({length:6},(_,i)=> s.rolls[i]!=null?s.rolls[i]:"");
+    panel.innerHTML = `
+      <p class="help" style="color:var(--ink-soft);margin-top:0">Vous avez lancé vos dés physiquement ? Entrez vos 6 résultats (4d6 en retirant le plus faible, soit un total entre 3 et 18 chacun), puis assignez-les ci-dessous comme d'habitude.</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end">
+        ${Array.from({length:6},(_,i)=>`<div class="field" style="margin-bottom:0"><label>Jet ${i+1}</label><input type="number" min="3" max="18" step="1" data-manual="${i}" value="${vals[i]}" style="width:4.6rem;text-align:center"></div>`).join("")}
+      </div>
+      <div style="margin-top:.7rem;display:flex;gap:.6rem;align-items:center">
+        <button class="btn small" id="manualApply">Valider ces jets</button>
+        <span id="manualErr" class="help" style="color:var(--danger)"></span>
+      </div>`;
+    $("#manualApply").addEventListener("click", ()=>{
+      const inputs = $$("#manualPanel [data-manual]");
+      const nums = inputs.map(inp=> inp.value===""?null:parseInt(inp.value,10));
+      if(nums.some(n=> n==null || isNaN(n) || n<3 || n>18)){
+        $("#manualErr").textContent = "Chaque jet doit être un nombre entre 3 et 18.";
+        return;
+      }
+      s.rolls = nums;
+      D.STATS.forEach(st=> s.statRollIndex[st]=null);
+      core.saveState(); paintRolls(); paintStats(); core.renderSummary();
+      $("#manualErr").textContent = "Jets enregistrés — assignez-les ci-dessous.";
+    });
+  }
+
+  function paintRolls(){
+    const used = Object.values(s.statRollIndex);
+    $("#rollsRow").innerHTML = (s.rolls.length? s.rolls.map((v,i)=>{
+      const usedBy = D.STATS.find(st=>s.statRollIndex[st]===i);
+      return `<span class="dieface ${usedBy?'dropped':''}" title="${usedBy?('Assigné à '+usedBy):'Disponible'}">${v}</span>`;
+    }).join("") : `<span class="help" style="color:var(--ink-faint)">Aucun jet effectué.</span>`);
+  }
+  function paintStats(){
+    $("#statGrid").innerHTML = D.STATS.map(stat=>{
+      const options = [`<option value="">—</option>`].concat(s.rolls.map((v,i)=>{
+        const usedBy = D.STATS.find(st=>s.statRollIndex[st]===i);
+        const disabled = usedBy && usedBy!==stat;
+        return `<option value="${i}" ${s.statRollIndex[stat]===i?"selected":""} ${disabled?"disabled":""}>${v}${disabled?` (→ ${usedBy})`:""}</option>`;
+      })).join("");
+      const fin = core.statFinal(stat), m = core.statModFinal(stat);
+      const race = core.getRace();
+      let raceBits=[];
+      if(race){ race.bonus.concat(race.malus).forEach(b=>{ if(b.stat===stat) raceBits.push(core.fmtBonus(b)); }); }
+      (s.raceChoiceBonuses||[]).forEach(st=>{ if(st===stat) raceBits.push("+1 (choix libre)"); });
+      return `<div class="stat-card">
+        <div class="lbl">${D.STAT_LABELS[stat]}</div>
+        <select data-stat="${stat}" style="width:100%;margin:.4rem 0">${options}</select>
+        <div class="val tabular">${fin==null?"–":fin}</div>
+        <div class="mod tabular">${m==null?"":(m>=0?"+":"")+m+" mod."}</div>
+        <div class="breakdown">${raceBits.length?esc(raceBits.join(", ")):"aucun bonus racial"}</div>
+      </div>`;
+    }).join("");
+    $$("#statGrid select").forEach(sel=> sel.addEventListener("change", e=>{
+      const stat=e.target.dataset.stat; const val=e.target.value;
+      s.statRollIndex[stat] = val===""?null:parseInt(val,10);
+      core.saveState(); paintRolls(); paintStats(); core.renderSummary();
+    }));
+  }
+  $("#rollAll").addEventListener("click", ()=>{
+    s.rolls = Array.from({length:6},()=>core.roll4d6drop().total);
+    D.STATS.forEach(st=> s.statRollIndex[st]=null);
+    core.saveState(); paintRolls(); paintStats(); core.renderSummary();
+    $("#rollsRow .dieface")?.classList?.add("rolling");
+  });
+  $("#manualToggle").addEventListener("click", ()=>{ manualOpen=!manualOpen; paintManualPanel(); });
+  $("#prev2").addEventListener("click", ()=>core.go(0));
+  $("#next2").addEventListener("click", ()=>core.go(2));
+  paintRolls(); paintStats(); paintManualPanel();
+}
+
+/* ---------- STEP 3 : compétences civiles ---------- */
+function renderStep3(root){
+  const s=core.state;
+  root.innerHTML = `
+   <div class="step-head"><div><div class="eyebrow">Chapitre III</div><h2>Compétences civiles</h2></div></div>
+   <p class="help" style="color:var(--ink-soft)">Le budget de chaque catégorie = valeur de la caractéristique associée × 6. Score plafonné à 100 (ramené à 80 en jeu).</p>
+   <div id="catList"></div>
+   <div class="step-foot no-print"><button class="btn secondary" id="prev3">← Précédent</button><button class="btn" id="next3">Étape suivante →</button></div>`;
+  function paint(){
+    $("#catList").innerHTML = Object.keys(D.SKILL_CATEGORIES).map(cat=>{
+      const budget=core.civilBudget(cat), spent=core.civilSpent(cat), remain=budget-spent;
+      return `<details class="skillcat" open>
+        <summary><span>${cat} <small class="help" style="text-transform:none;letter-spacing:0">(${D.STAT_LABELS[D.CATEGORY_STAT[cat]]})</small></span>
+          <span class="badge ${remain<0?'neg':'pos'}">${spent} / ${budget} pts</span></summary>
+        ${D.SKILL_CATEGORIES[cat].map(sk=>{
+          const b=core.allSkillBonuses()[sk];
+          const bonusTitle = b? b.parts.map(p=>`${p.label} ${p.amount>0?"+":""}${p.amount}`).join(", ") : "";
+          const total = Math.min(100,(s.civil[sk]||0)+(b?b.total:0));
+          return `<div class="skillrow">
+            <span class="name">${esc(sk)}</span>
+            <span class="bonus" ${bonusTitle?`title="${esc(bonusTitle)}"`:""}>${b?((b.total>0?"+":"")+b.total+" → "+total):""}</span>
+            <span class="stepper">
+              <button data-dec="${esc(sk)}" type="button">–</button>
+              <input type="number" min="0" max="100" data-skill="${esc(sk)}" value="${s.civil[sk]||0}">
+              <button data-inc="${esc(sk)}" type="button">+</button>
+            </span></div>`;
+        }).join("")}
+      </details>`;
+    }).join("");
+    $$("#catList input[data-skill]").forEach(inp=> inp.addEventListener("change", e=>{
+      let v=parseInt(e.target.value,10); if(isNaN(v)||v<0) v=0; if(v>100) v=100;
+      s.civil[e.target.dataset.skill]=v; core.saveState(); paint(); core.renderSummary();
+    }));
+    $$("#catList [data-inc]").forEach(b=> b.addEventListener("click", ()=>{ const sk=b.dataset.inc; s.civil[sk]=(s.civil[sk]||0)+1; core.saveState(); paint(); core.renderSummary(); }));
+    $$("#catList [data-dec]").forEach(b=> b.addEventListener("click", ()=>{ const sk=b.dataset.dec; s.civil[sk]=Math.max(0,(s.civil[sk]||0)-1); core.saveState(); paint(); core.renderSummary(); }));
+  }
+  $("#prev3").addEventListener("click", ()=>core.go(1));
+  $("#next3").addEventListener("click", ()=>core.go(3));
+  paint();
+}
+
+/* ---------- STEP 4 : traits naturels ---------- */
+function allSkillNames(){ return Object.values(D.SKILL_CATEGORIES).flat(); }
+function renderStep4(root){
+  const s=core.state;
+  root.innerHTML = `
+   <div class="step-head"><div><div class="eyebrow">Chapitre IV</div><h2>Traits naturels</h2></div></div>
+   <p class="help" style="color:var(--ink-soft)">Le premier trait est gratuit et obligatoire (+10 à une compétence). Vous pouvez ensuite ajouter jusqu'à deux traits positifs supplémentaires, chacun équilibré par un trait négatif de même valeur.</p>
+   <div class="field"><label>Trait gratuit (obligatoire, +10)</label>
+     <select id="freeTrait"><option value="">— choisir une compétence —</option>
+       ${allSkillNames().map(sk=>`<option value="${esc(sk)}" ${s.traitFree&&s.traitFree.skill===sk?"selected":""}>${esc(sk)} → ${esc(D.NATURAL_TRAITS[sk][0])} (+10)</option>`).join("")}
+     </select></div>
+   <div id="pairsZone"></div>
+   <button class="btn secondary small no-print" id="addPair">+ Ajouter une paire (positif / négatif)</button>
+   <div class="step-foot no-print"><button class="btn secondary" id="prev4">← Précédent</button><button class="btn" id="next4">Étape suivante →</button></div>`;
+
+  function paintPairs(){
+    $("#pairsZone").innerHTML = (s.traitPairs||[]).map((p,i)=>`
+      <div class="note" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center">
+        <div class="field" style="flex:1;min-width:200px;margin:0"><label>Trait positif (+10)</label>
+          <select data-pair="${i}" data-side="pos">${allSkillNames().map(sk=>`<option value="${esc(sk)}" ${p.pos===sk?"selected":""}>${esc(sk)} → ${esc(D.NATURAL_TRAITS[sk][0])}</option>`).join("")}</select></div>
+        <div class="field" style="flex:1;min-width:200px;margin:0"><label>Trait négatif (-10)</label>
+          <select data-pair="${i}" data-side="neg">${allSkillNames().map(sk=>`<option value="${esc(sk)}" ${p.neg===sk?"selected":""}>${esc(sk)} → ${esc(D.NATURAL_TRAITS[sk][1])}</option>`).join("")}</select></div>
+        <button class="btn ghost small no-print" data-removepair="${i}">Retirer</button>
+      </div>`).join("");
+    $$("#pairsZone select").forEach(sel=> sel.addEventListener("change", e=>{
+      const i=parseInt(e.target.dataset.pair,10), side=e.target.dataset.side;
+      s.traitPairs[i][side]=e.target.value; core.saveState(); core.renderSummary();
+    }));
+    $$("#pairsZone [data-removepair]").forEach(b=> b.addEventListener("click", ()=>{
+      s.traitPairs.splice(parseInt(b.dataset.removepair,10),1); core.saveState(); paintPairs(); paintAddBtn();
+    }));
+  }
+  function paintAddBtn(){ $("#addPair").style.display = (s.traitPairs||[]).length>=2 ? "none":"inline-block"; }
+  $("#freeTrait").addEventListener("change", e=>{
+    const sk=e.target.value; s.traitFree = sk?{skill:sk,label:D.NATURAL_TRAITS[sk][0]}:null; core.saveState(); core.renderSummary();
+  });
+  $("#addPair").addEventListener("click", ()=>{
+    if((s.traitPairs||[]).length>=2) return;
+    const names=allSkillNames();
+    s.traitPairs.push({pos:names[0],neg:names[1]});
+    core.saveState(); paintPairs(); paintAddBtn();
+  });
+  $("#prev4").addEventListener("click", ()=>core.go(2));
+  $("#next4").addEventListener("click", ()=>core.go(4));
+  paintPairs(); paintAddBtn();
+}
+
+/* ---------- STEP 5 & 6 : arbres (générique) ---------- */
+function renderTreeStep(root, opts){
+  const s=core.state;
+  const groups = {};
+  opts.branches.forEach(b=>{ (groups[b.group]=groups[b.group]||[]).push(b); });
+
+  root.innerHTML = `
+   <div class="step-head"><div><div class="eyebrow">${opts.chapter}</div><h2>${opts.title}</h2></div></div>
+   ${opts.statChooser? opts.statChooser() : ""}
+   <div class="budget" id="budgetBar"></div>
+   <div id="branchZone"></div>
+   <div class="step-foot no-print"><button class="btn secondary" id="prevT">← Précédent</button><button class="btn" id="nextT">Étape suivante →</button></div>`;
+
+  function branchState(id){ return opts.store()[id] || (opts.store()[id]={unlocked:false, mastery:0, chances:0, de:0, crit:0}); }
+
+  function paintBudget(){
+    const arbrePts=opts.arbrePts(), masteryPts=opts.masteryPts(), arbreSpent=opts.arbreSpent(), masterySpent=opts.masterySpent();
+    $("#budgetBar").innerHTML = `
+     <span>Points d'arbre : <b class="tabular ${arbrePts-arbreSpent<0?'over':'ok'}">${arbreSpent} / ${arbrePts}</b></span>
+     <span>Points de maîtrise : <b class="tabular ${masteryPts-masterySpent<0?'over':'ok'}">${masterySpent} / ${masteryPts}</b></span>`;
+  }
+
+  function paint(){
+    paintBudget();
+    const arbreLeft = opts.arbrePts()-opts.arbreSpent();
+    const masteryLeft = opts.masteryPts()-opts.masterySpent();
+    $("#branchZone").innerHTML = Object.keys(groups).map(g=>`
+      <h3 style="margin-top:1.3rem">${esc(g)}</h3>
+      ${groups[g].map(b=>{
+        const bs=branchState(b.id);
+        const classBonus = (core.state.guerrierWeaponId===b.id && core.hasClass("guerrier")) ? 10 : 0;
+        const masteryVal = bs.unlocked ? 25+(bs.mastery||0)+classBonus : 0;
+        return `<div class="branch">
+          <div class="bhead">
+            <h4>${esc(b.name)}${b.stat?` <small class="help">(${b.stat})</small>`:""}${classBonus?` <small class="help" style="color:var(--gold)">+10 don Guerrier</small>`:""}</h4>
+            ${bs.unlocked? `<span class="mastery tabular">${Math.min(masteryVal,100)}%</span>` : `<button class="btn small no-print" data-unlock="${b.id}" ${arbreLeft<1?"disabled":""}>Débloquer (1 pt d'arbre)</button>`}
+          </div>
+          ${bs.unlocked? renderBranchBody(b,bs,arbreLeft,masteryLeft) : ""}
+        </div>`;
+      }).join("")}
+    `).join("");
+    wire();
+  }
+  function nodeRow(label, key, max, bs, arbreLeft, branchId){
+    const current = bs[key]||0;
+    let html=`<div>`;
+    for(let i=1;i<=max;i++){
+      const bought = current>=i;
+      const isNext = current+1===i;
+      const locked = !bought && !isNext;
+      html += `<span class="node ${bought?'bought':''} ${locked?'locked':''}" data-node="${branchId}|${key}|${i}" title="${label} — niveau ${i}/${max}">${label} (${i}/${max})</span>`;
+    }
+    html+=`</div>`;
+    return html;
+  }
+  const masteryStepper = (b,bs)=>`<div style="padding:0 .9rem .9rem">
+        <label class="help">Points de maîtrise investis (maîtrise = 25 + investis) :</label>
+        <span class="stepper"><button data-mdec="${b.id}" type="button">–</button><input type="number" data-mastery="${b.id}" value="${bs.mastery||0}" min="0"><button data-minc="${b.id}" type="button">+</button></span>
+      </div>`;
+  function renderBranchBody(b,bs,arbreLeft,masteryLeft){
+    if(b.kind==="armor"){
+      return `<div class="nodes">
+        <span class="node" data-armnode="${b.id}" data-armdir="1" title="Ajouter 1 point d'armure (coût 1 pt d'arbre)">Armure ${bs.chances||0} — +1 ARM</span>
+        <span class="node" data-armnode="${b.id}" data-armdir="-1" title="Retirer 1 point d'armure">− ARM</span>
+        ${nodeRow("+1 DE bouclier","de",3,bs,arbreLeft,b.id)}
+      </div>
+      <div class="special"><b>Contenu :</b> ${esc(b.items)}</div>
+      ${masteryStepper(b,bs)}`;
+    }
+    if(b.kind==="magic"){
+      return masteryStepper(b,bs);
+    }
+    return `<div class="nodes">
+        ${nodeRow("+5% chances","chances",3,bs,arbreLeft,b.id)}
+        ${nodeRow("+1 dé","de",3,bs,arbreLeft,b.id)}
+        ${nodeRow("+1/+3/+5 crit","crit",3,bs,arbreLeft,b.id)}
+      </div>
+      ${b.special?`<div class="special"><b>${((bs.chances||0)+(bs.de||0)+(bs.crit||0))>=9?"Capacité débloquée":"Capacité spéciale (9 nœuds requis)"} :</b> ${esc(b.special)}</div>`:""}
+      ${masteryStepper(b,bs)}`;
+  }
+  function wire(){
+    $$("#branchZone [data-unlock]").forEach(btn=> btn.addEventListener("click", ()=>{
+      if(opts.arbrePts()-opts.arbreSpent()<1) return;
+      branchState(btn.dataset.unlock).unlocked=true; core.saveState(); paint(); core.renderSummary();
+    }));
+    $$("#branchZone [data-node]").forEach(n=> n.addEventListener("click", ()=>{
+      const [bid,key,idx]=n.dataset.node.split("|"); const bs=branchState(bid); const i=parseInt(idx,10);
+      const current=bs[key]||0;
+      if(current>=i){ bs[key]=i-1; } // toggle off (retire ce nœud et les suivants)
+      else if(current+1===i){ if(opts.arbrePts()-opts.arbreSpent()<1) return; bs[key]=i; }
+      core.saveState(); paint(); core.renderSummary();
+    }));
+    $$("#branchZone [data-armnode]").forEach(n=> n.addEventListener("click", ()=>{
+      const bs=branchState(n.dataset.armnode); const dir=parseInt(n.dataset.armdir,10);
+      if(dir>0 && opts.arbrePts()-opts.arbreSpent()<1) return;
+      bs.chances=Math.max(0,(bs.chances||0)+dir); core.saveState(); paint(); core.renderSummary();
+    }));
+    $$("#branchZone [data-minc]").forEach(b=> b.addEventListener("click", ()=>{
+      const bs=branchState(b.dataset.minc); if(opts.masteryPts()-opts.masterySpent()<1) return;
+      bs.mastery=(bs.mastery||0)+1; core.saveState(); paint(); core.renderSummary();
+    }));
+    $$("#branchZone [data-mdec]").forEach(b=> b.addEventListener("click", ()=>{
+      const bs=branchState(b.dataset.mdec); bs.mastery=Math.max(0,(bs.mastery||0)-1); core.saveState(); paint(); core.renderSummary();
+    }));
+    $$("#branchZone [data-mastery]").forEach(inp=> inp.addEventListener("change", e=>{
+      const bs=branchState(e.target.dataset.mastery); let v=parseInt(e.target.value,10)||0; if(v<0)v=0;
+      bs.mastery=v; core.saveState(); paint(); core.renderSummary();
+    }));
+  }
+  $("#prevT").addEventListener("click", opts.onPrev);
+  $("#nextT").addEventListener("click", opts.onNext);
+  paint();
+}
+
+function renderStep5(root){
+  renderTreeStep(root, {
+    chapter:"Chapitre VII", title:"Arbre de combat",
+    branches: D.WEAPON_BRANCHES.map(w=>Object.assign({},w,{kind:"weapon"}))
+      .concat(D.ARMOR_BRANCHES.map(a=>Object.assign({},a,{kind:"armor",special:null}))),
+    statChooser: ()=>`<div class="field" style="max-width:340px"><label>Caractéristique utilisée</label>
+      <select id="wstat">${["FOR","DEX"].map(v=>`<option value="${v}" ${core.state.weaponStatChoice===v?"selected":""}>${D.STAT_LABELS[v]}</option>`).join("")}</select></div>`,
+    arbrePts: core.weaponArbrePoints, masteryPts: core.weaponMasteryPoints,
+    arbreSpent: core.weaponArbreSpent, masterySpent: core.weaponMasterySpent,
+    store: ()=>core.state.weapon.branches,
+    onPrev: ()=>core.go(3), onNext: ()=>core.go(5),
+  });
+  const sel=$("#wstat"); if(sel) sel.addEventListener("change", e=>{ core.state.weaponStatChoice=e.target.value; core.saveState(); renderStep5(root); core.renderSummary(); });
+}
+
+function renderStep6(root){
+  const branches = [];
+  D.MAGIC_SCHOOLS.forEach(sc=> sc.sub.forEach(sub=> branches.push({id:sc.id+"-"+sub, name:sub, group:sc.name+" ("+sc.alt+")", stat:null, special:null, kind:"magic"})));
+  renderTreeStep(root, {
+    chapter:"Chapitre VI", title:"Arbre de magie",
+    branches,
+    statChooser: ()=>`<p class="help" style="color:var(--ink-soft)">Toujours basé sur le modificateur d'Intelligence. Dé de magie actuel (niveau 1) : <b>1d6</b> + modificateur d'Intelligence.</p>`,
+    arbrePts: core.magicArbrePoints, masteryPts: core.magicMasteryPoints,
+    arbreSpent: core.magicArbreSpent, masterySpent: core.magicMasterySpent,
+    store: ()=>core.state.magic.schools,
+    onPrev: ()=>core.go(4), onNext: ()=>core.go(6),
+  });
+}
+
+/* ---------- STEP 7 : PV & or ---------- */
+function renderStep7(root){
+  const s=core.state;
+  root.innerHTML = `
+   <div class="step-head"><div><div class="eyebrow">Chapitre X</div><h2>Points de vie &amp; or de départ</h2></div></div>
+   <div class="grid2">
+     <div class="stat-card" style="text-align:left;padding:1.1rem">
+       <div class="lbl">Points de vie</div>
+       <div class="val tabular">${core.pvValue()==null?"–":core.pvValue()}</div>
+       <div class="breakdown">Moyenne de Force (${core.statFinal("FOR")??"–"}) et Constitution (${core.statFinal("CON")??"–"})</div>
+     </div>
+     <div class="stat-card" style="text-align:left;padding:1.1rem">
+       <div class="lbl">Or de départ</div>
+       <div class="val tabular">${core.goldStart()} PO</div>
+       <div class="breakdown">Moitié du salaire au bis de la classe sociale (plafond 1000 PO)</div>
+     </div>
+   </div>
+   <h3 style="margin-top:1.4rem">Classe sociale</h3>
+   <div class="pick-grid">
+     ${D.SOCIAL_CLASSES.map(sc=>`<div class="card-pick ${s.socialClassId===sc.id?'selected':''}" data-social="${sc.id}">
+        <h4>${esc(sc.name)}</h4><p>${sc.salary} Cl / bis</p></div>`).join("")}
+   </div>
+   <h3 style="margin-top:1.4rem">Langues</h3>
+   <p class="help" style="color:var(--ink-soft)">Vous pouvez choisir <b id="langMax"></b> langue(s) (modificateur d'Intelligence + 1, minimum 1). <span id="langCount"></span></p>
+   <div id="langPicker"></div>
+   <div class="step-foot no-print"><button class="btn secondary" id="prev7">← Précédent</button><button class="btn" id="next7">Étape suivante →</button></div>`;
+  $$("[data-social]").forEach(el=> el.addEventListener("click", ()=>{ s.socialClassId=el.dataset.social; core.saveState(); renderStep7(root); core.renderSummary(); }));
+  $("#prev7").addEventListener("click", ()=>core.go(5));
+  $("#next7").addEventListener("click", ()=>core.go(7));
+
+  function paintLanguages(){
+    const max = core.languageCount();
+    $("#langMax").textContent = max;
+    if(!s.languages) s.languages=[];
+    if(s.languages.length>max){ s.languages=s.languages.slice(0,max); core.saveState(); }
+    $("#langCount").textContent = `(${s.languages.length}/${max} sélectionnée${s.languages.length>1?"s":""})`;
+    const groups = [["courantes","Langues courantes"],["anciennes","Langues anciennes"],["diverses","Langues & dialectes divers"]];
+    $("#langPicker").innerHTML = groups.map(([key,label])=>`
+      <div style="margin-bottom:.8rem">
+        <div class="lbl" style="font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.06em;color:var(--ink-soft);text-transform:uppercase;margin-bottom:.4rem">${label}</div>
+        <div class="pillrow">
+          ${D.LANGUAGES[key].map(lg=>{
+            const checked = s.languages.includes(lg);
+            const disabled = !checked && s.languages.length>=max;
+            return `<label class="badge ${checked?'pos':''}" style="cursor:${disabled?'not-allowed':'pointer'};opacity:${disabled?.5:1}">
+              <input type="checkbox" data-lang="${esc(lg)}" ${checked?"checked":""} ${disabled?"disabled":""} style="margin:0 .3em 0 0">${esc(lg)}
+            </label>`;
+          }).join("")}
+        </div>
+      </div>`).join("");
+    $$("#langPicker [data-lang]").forEach(cb=> cb.addEventListener("change", e=>{
+      const lg=e.target.dataset.lang;
+      if(e.target.checked){ if(!s.languages.includes(lg) && s.languages.length<max) s.languages.push(lg); }
+      else { s.languages = s.languages.filter(x=>x!==lg); }
+      core.saveState(); paintLanguages(); core.renderSummary();
+    }));
+  }
+  paintLanguages();
+}
+
+/* ---------- STEP 8 : équipement + fiche finale ---------- */
+function renderStep8(root){
+  const s=core.state; const race=core.getRace(), cls=core.getClass(s.classMainId), cls2=core.getClass(s.classSecondaryId);
+  root.innerHTML = `
+   <div class="step-head"><div><div class="eyebrow">Chapitre VIII</div><h2>Équipement, histoire &amp; fiche finale</h2></div>
+     <div class="no-print" style="display:flex;gap:.5rem;flex-wrap:wrap">
+       <button class="btn no-print" id="exportBtn" style="display:none">💾 Télécharger la fiche (imprimable)</button>
+       <button class="btn secondary no-print" id="printBtn">🖨 Imprimer directement</button>
+     </div></div>
+   <p id="exportStatus" class="help no-print" style="color:var(--ink-soft);min-height:1.2em"></p>
+   <div class="grid2 no-print">
+     <div class="field"><label>Équipement de départ</label><textarea id="f-equip" rows="5" placeholder="Armes, armures, sac à dos, provisions...">${esc(s.equipmentText)}</textarea></div>
+     <div class="field"><label>Histoire complémentaire</label><textarea id="f-hist" rows="5" placeholder="Notes additionnelles sur le passé du personnage...">${esc(s.historyText)}</textarea></div>
+   </div>
+   <div id="sheet" class="sheet" style="margin-top:1.6rem"></div>
+   <div class="step-foot no-print"><button class="btn secondary" id="prev8">← Précédent</button><span></span></div>`;
+  $("#f-equip").addEventListener("input", e=>{ s.equipmentText=e.target.value; core.saveState(); });
+  $("#f-hist").addEventListener("input", e=>{ s.historyText=e.target.value; core.saveState(); });
+  $("#prev8").addEventListener("click", ()=>core.go(6));
+  $("#printBtn").addEventListener("click", ()=>window.print());
+
+  (async function initExport(){
+    try{
+      const downloads = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null;
+      if(downloads){ $("#exportBtn").style.display=""; $("#exportBtn").addEventListener("click", ()=>doExport(downloads)); }
+      else { $("#exportStatus").textContent = "Téléchargement indisponible dans cet affichage : utilisez « Imprimer directement »."; }
+    }catch(e){
+      $("#exportStatus").textContent = "Téléchargement indisponible dans cet affichage : utilisez « Imprimer directement ».";
+    }
+  })();
+
+  async function doExport(downloads){
+    const status=$("#exportStatus");
+    status.textContent = "Préparation du fichier…";
+    paintSheet();
+    const safeName = (s.identity.name||"fiche-personnage").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"_") || "fiche-personnage";
+    try{
+      await downloads.save({filename: safeName+".html", data: buildExportHTML()});
+      status.textContent = "Fiche téléchargée. Ouvrez le fichier dans votre navigateur puis Fichier → Imprimer pour l'enregistrer en PDF.";
+    }catch(err){
+      const code = err && err.code;
+      if(code==="extension_not_enabled" || code==="rejected_extension"){
+        try{
+          await downloads.save({filename: safeName+".txt", data: buildExportText()});
+          status.textContent = "Le format HTML n'est pas autorisé ici : la fiche a été téléchargée en texte brut à la place.";
+        }catch(err2){
+          status.textContent = "Le téléchargement a échoué. Utilisez « Imprimer directement ».";
+        }
+      } else if(code==="declined"){
+        status.textContent = "";
+      } else if(code==="rate_limited"){
+        status.textContent = "Une demande de téléchargement est déjà en cours — patientez puis réessayez.";
+      } else if(code==="too_large"){
+        status.textContent = "La fiche est trop volumineuse pour être téléchargée ici. Utilisez « Imprimer directement ».";
+      } else {
+        status.textContent = "Le téléchargement a échoué. Utilisez « Imprimer directement ».";
+      }
+    }
+  }
+
+  function buildExportHTML(){
+    const title = esc(s.identity.name||"Fiche de personnage") + " — Forge de Personnage";
+    const sheetHtml = $("#sheet").innerHTML;
+    return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${title}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#efe4c9;--surface:#fbf4e2;--surface-2:#f2e6c8;--ink:#2b2013;--ink-soft:#5b4c38;--ink-faint:#8a7a5c;--gold:#8a6a1e;--good:#3e6b4f;--danger:#9c2b26;--border:#c9b78e;--border-soft:#ddd0aa}
+*{box-sizing:border-box}
+body{margin:0;padding:2rem;background:var(--bg);color:var(--ink);font-family:"Spectral",serif;line-height:1.5}
+h1{font-family:"Cinzel",serif;font-size:1.4rem;letter-spacing:.04em;color:var(--gold);margin:0 0 .3rem}
+.exp-top{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.2rem;flex-wrap:wrap}
+.exp-sub{color:var(--ink-soft);font-size:.85rem;margin:0}
+button.printme{font-family:inherit;background:var(--gold);color:#fff7e9;border:none;border-radius:6px;padding:.6em 1.1em;font-size:.85rem;cursor:pointer}
+.sheet{display:grid;gap:1rem;max-width:1000px;margin:0 auto}
+.sheet .block{border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;background:var(--surface-2)}
+.sheet .block h4{font-family:"Cinzel",serif;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin:0 0 .6rem}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:640px){.two-col{grid-template-columns:1fr}}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem}
+.stat-card{border:1px solid var(--border);border-radius:8px;padding:.8rem;background:var(--surface);text-align:center}
+.stat-card .lbl{font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
+.stat-card .val{font-size:2.1rem;font-weight:600}
+.stat-card .mod{font-size:.85rem;color:var(--gold)}
+.pillrow{display:flex;flex-wrap:wrap;gap:.3rem}
+.badge{display:inline-flex;align-items:center;gap:.3em;font-size:.72rem;border-radius:99px;padding:.15em .65em;border:1px solid var(--border);color:var(--ink-soft);background:var(--surface)}
+.badge.pos{color:var(--good);border-color:var(--good)}
+.badge.neg{color:var(--danger);border-color:var(--danger)}
+table.simple{border-collapse:collapse;width:100%;font-size:.88rem}
+table.simple td{border-bottom:1px solid var(--border-soft);padding:.35em .5em;text-align:left}
+@media print{
+  body{background:#fff;padding:0}
+  .exp-top button, .no-print{display:none !important}
+  .sheet .block{break-inside:avoid;border-color:#999}
+}
+</style></head>
+<body>
+<div class="exp-top no-print"><div><h1>${title}</h1><p class="exp-sub">Généré par la Forge de Personnage — Ashford &amp; Dirman Adventures</p></div>
+<button class="printme" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button></div>
+${sheetHtml}
+</body></html>`;
+  }
+
+  function buildExportText(){
+    const lines=[];
+    lines.push((s.identity.name||"Fiche de personnage")+" — Forge de Personnage (Ashford & Dirman Adventures)");
+    lines.push("");
+    const tmp = document.createElement("div");
+    tmp.innerHTML = $("#sheet").innerHTML;
+    tmp.querySelectorAll(".block").forEach(block=>{
+      const h4 = block.querySelector("h4");
+      lines.push("== "+(h4?h4.textContent:"")+" ==");
+      lines.push(block.textContent.replace(h4?h4.textContent:"","").replace(/\s+/g," ").trim());
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+
+  paintSheet();
+
+  function paintSheet(){
+    const civilBlocks = Object.keys(D.SKILL_CATEGORIES).map(cat=>`
+      <div class="block"><h4>${cat}</h4><table class="simple"><tbody>
+        ${D.SKILL_CATEGORIES[cat].map(sk=>{
+          const base=s.civil[sk]||0, b=core.allSkillBonuses()[sk], tb=b?b.total:0, tot=Math.min(100,base+tb);
+          const title = b? b.parts.map(p=>`${p.label} ${p.amount>0?"+":""}${p.amount}`).join(", ") : "";
+          return `<tr><td>${esc(sk)}</td><td class="tabular" style="text-align:right" ${title?`title="${esc(title)}"`:""}>${tot}${tb?` <small style="color:var(--gold)">(${base}${tb>0?"+":""}${tb})</small>`:""}</td></tr>`;
+        }).join("")}
+      </tbody></table></div>`).join("");
+    const weaponBlocks = D.WEAPON_BRANCHES.concat(D.ARMOR_BRANCHES).filter(b=> (s.weapon.branches[b.id]||{}).unlocked).map(b=>{
+      const bs=s.weapon.branches[b.id]; const classBonus=(s.guerrierWeaponId===b.id && core.hasClass("guerrier"))?10:0;
+      const m=Math.min(100,25+(bs.mastery||0)+classBonus);
+      return `<tr><td>${esc(b.name)}${classBonus?` <small style="color:var(--gold)">(+10 don)</small>`:""}</td><td class="tabular" style="text-align:right">${m}%</td><td style="text-align:right">${(bs.chances+bs.de+bs.crit)>=9?"★ capacité":((bs.chances||0)+(bs.de||0)+(bs.crit||0))+"/9"}</td></tr>`;
+    }).join("");
+    const magicBlocks = D.MAGIC_SCHOOLS.map(sc=> sc.sub.map(sub=>{
+      const id=sc.id+"-"+sub; const bs=s.magic.schools[id];
+      if(!bs||!bs.unlocked) return "";
+      const m=Math.min(100,25+(bs.mastery||0));
+      return `<tr><td>${esc(sc.name)} — ${esc(sub)}</td><td class="tabular" style="text-align:right">${m}%</td></tr>`;
+    }).join("")).join("");
+
+    $("#sheet").innerHTML = `
+     <div class="block">
+      <h4>Identité</h4>
+      <div class="two-col">
+        <div><b>${esc(s.identity.name||"—")}</b><br>Joueur : ${esc(s.identity.player||"—")}<br>Alignement : ${esc(s.identity.align||"—")}</div>
+        <div>Race : ${esc(race?race.name:"—")}<br>Classe : ${esc(cls?cls.name:"—")}${cls2?` / ${esc(cls2.name)}`:""}<br>Taille : ${esc(s.identity.height||"—")} · Yeux : ${esc(s.identity.eyes||"—")} · Cheveux : ${esc(s.identity.hair||"—")}</div>
+      </div>
+      ${s.identity.desc?`<p style="margin-top:.6rem">${esc(s.identity.desc)}</p>`:""}
+      ${s.historyText?`<p style="margin-top:.4rem">${esc(s.historyText)}</p>`:""}
+     </div>
+
+     <div class="block">
+      <h4>Caractéristiques &amp; ressources</h4>
+      <div class="stat-grid">
+       ${D.STATS.map(st=>`<div class="stat-card"><div class="lbl">${st}</div><div class="val tabular">${core.statFinal(st)??"–"}</div><div class="mod tabular">${core.statModFinal(st)!=null?((core.statModFinal(st)>=0?"+":"")+core.statModFinal(st)):""}</div></div>`).join("")}
+      </div>
+      <div class="pillrow" style="margin-top:.8rem">
+        <span class="badge pos">PV ${core.pvValue()??"–"}</span>
+        <span class="badge">Or ${core.goldStart()} PO</span>
+      </div>
+     </div>
+
+     <div class="block"><h4>Langues</h4><p>${(s.languages&&s.languages.length)? s.languages.map(esc).join(" · ") : "Aucune sélectionnée ("+core.languageCount()+" disponible(s))"}</p></div>
+
+     <div class="block"><h4>Traits raciaux</h4><p>${race? race.traits.map(esc).join(" · ") : "—"}</p></div>
+
+     <div class="block"><h4>Traits naturels</h4><p>
+       ${s.traitFree?`<span class="badge pos">${esc(s.traitFree.skill)} → ${esc(s.traitFree.label)} (+10)</span> `:""}
+       ${(s.traitPairs||[]).map(p=>`<span class="badge pos">${esc(p.pos)} → ${esc(D.NATURAL_TRAITS[p.pos][0])} (+10)</span> <span class="badge neg">${esc(p.neg)} → ${esc(D.NATURAL_TRAITS[p.neg][1])} (-10)</span>`).join(" ")}
+       ${(!s.traitFree && !(s.traitPairs||[]).length) ? "—":""}
+     </p></div>
+
+     <div class="two-col">
+       <div class="block"><h4>Dons de classe</h4>
+         ${cls?`<p><b>${esc(cls.name)}</b><br>Niv.1 : ${esc(cls.n1)}<br>${cls.n3?`Niv.3 : ${esc(cls.n3)}<br>`:""}${cls.n5?`Niv.5 : ${esc(cls.n5)}<br>`:""}Passif : ${esc(cls.passif)}</p>`:"<p>—</p>"}
+         ${cls2?`<p><b>${esc(cls2.name)}</b> (secondaire)<br>${esc(cls2.n1)}</p>`:""}
+         ${(()=>{ const a=core.getArcane(s.arcaneMain); return a?`<p><b>Arcane :</b> ${esc(a.name)} — ${esc(a.archetype)}<br>${esc(a.bonus)} ${esc(a.weakness)}</p>`:""; })()}
+         ${(()=>{ const d=core.getDeity(s.deityId); return d?`<p><b>Divinité :</b> ${esc(d.name)} (${esc(d.domaine)})<br><i>Oraison :</i> ${esc(d.oraison)}</p>`:""; })()}
+         ${(()=>{ const w=D.WEAPON_BRANCHES.find(x=>x.id===s.guerrierWeaponId); return w?`<p><b>Arme de prédilection :</b> ${esc(w.name)} (+10 maîtrise)</p>`:""; })()}
+       </div>
+       <div class="block"><h4>Équipement</h4><p>${s.equipmentText?esc(s.equipmentText).replace(/\\n/g,"<br>"):"—"}</p></div>
+     </div>
+
+     <div class="block"><h4>Compétences civiles</h4><div class="two-col" style="grid-template-columns:repeat(3,1fr)">${civilBlocks}</div></div>
+
+     <div class="block"><h4>Arbre de combat</h4><table class="simple"><tbody>${weaponBlocks||"<tr><td>Aucune branche débloquée.</td></tr>"}</tbody></table></div>
+
+     <div class="block"><h4>Arbre de magie</h4><table class="simple"><tbody>${magicBlocks||"<tr><td>Aucune sous-école débloquée.</td></tr>"}</tbody></table></div>
+    `;
+  }
+}
+
+window.ADA.core.renderStep2=renderStep2; window.ADA.core.renderStep3=renderStep3; window.ADA.core.renderStep4=renderStep4;
+window.ADA.core.renderStep5=renderStep5; window.ADA.core.renderStep6=renderStep6; window.ADA.core.renderStep7=renderStep7;
+window.ADA.core.renderStep8=renderStep8;
+})();
+</script>
+<script>
+/* =====================================================================
+   INIT
+   ===================================================================== */
+(function(){
+"use strict";
+const core = window.ADA.core;
+function renderAll(){
+  core.renderRail();
+  core.renderSummary();
+  const root = document.getElementById("stepRoot");
+  const renderers = [core.renderStep1,core.renderStep2,core.renderStep3,core.renderStep4,core.renderStep5,core.renderStep6,core.renderStep7,core.renderStep8];
+  renderers[core.state.step](root);
+}
+window.ADA.renderAll = renderAll;
+
+function applyTheme(t){
+  if(t){ document.documentElement.setAttribute("data-theme", t); } else { document.documentElement.removeAttribute("data-theme"); }
+  try{ localStorage.setItem("ada_theme", t||""); }catch(e){}
+}
+document.getElementById("themeToggle").addEventListener("click", ()=>{
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur==="dark" ? "light" : (cur==="light" ? null : (window.matchMedia("(prefers-color-scheme: dark)").matches?"light":"dark"));
+  applyTheme(next);
+});
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  if(!confirm("Recommencer une nouvelle fiche ? Toute la progression actuelle sera perdue.")) return;
+  try{ localStorage.removeItem("ada_char_v1"); }catch(e){}
+  location.reload();
+});
+
+try{ const t=localStorage.getItem("ada_theme"); if(t) applyTheme(t); }catch(e){}
+renderAll();
+})();
+</script>

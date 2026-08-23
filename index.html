@@ -185,6 +185,12 @@ table.simple th{color:var(--ink-soft);font-weight:600;font-size:.72rem;text-tran
 .stat-card .val{font-size:2.1rem;font-weight:600}
 .stat-card .mod{font-size:.85rem;color:var(--gold)}
 .stat-card .breakdown{font-size:.68rem;color:var(--ink-faint);margin-top:.2rem}
+.trackcard{border:1px solid var(--border);border-radius:8px;padding:.9rem .8rem 1.1rem;background:var(--surface-2);text-align:center;min-height:5.6rem}
+.trackcard .lbl{font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
+.trackcard input{width:100%;margin-top:.35rem;font-size:1.7rem;font-weight:600;text-align:center;background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:.25rem .2rem .45rem;color:var(--ink);font-family:inherit}
+.trackcard input:focus{outline:none;border-bottom-color:var(--gold)}
+.trackcard .sub{font-size:.68rem;color:var(--ink-faint);margin-top:.35rem}
+@media print{ .trackcard input{border-bottom:1px solid #999} }
 
 /* skill rows / point buy */
 .skillcat{border:1px solid var(--border);border-radius:8px;margin-bottom:.9rem;overflow:hidden}
@@ -662,8 +668,62 @@ const LANGUAGES = {
  diverses:["Aviaire","Terrestre","Aquatique","Igné","Terreux","Aérien","Aqueux","Infernal","Divin","Sylvestre","Gallisien","Profond"],
 };
 
+// ---- Chapitre V : les maîtrises --------------------------------------------
+// Capacités spéciales déblocables quand une compétence civile atteint 100 (elle redescend alors à 80,
+// plafond définitif). Une seule maîtrise par compétence, sauf Artisanat et Connaissance (dont une des
+// options "ouvre un autre champ").
+const MASTERIES = {
+ "Evaluer un trésor":["Évaluer un effet magique : détecte la magie, et permet de savoir ce que peut faire le sortilège associé.",
+  "Évaluer un prix : permet de déterminer le prix d'un objet instantanément, aidant dans les négociations.",
+  "Évaluer l'histoire (Archéologie) : permet de déterminer le passé d'un objet, aidant à en tirer la fonction, la civilisation d'origine, ect."],
+ "Premiers soins":["Chirurgien (permet de faire des opérations plus lourdes)","Diagnosticien : identifie les maladies et leur origine","Soin rapide : permet de stabiliser sur moins d'un round."],
+ "Cartographier":["Si le personnage est en possession de la carte de l'intérieur qu'il visite, il ne peut pas s'y perdre.",
+  "Si le personnage est en possession de la carte de l'extérieur qu'il visite, il ne peut pas s'y perdre.","Trouve plus facilement des salles cachées"],
+ "Mémoriser":["Mémoire améliorée pour les textes : capacité à se souvenir d'un contenu textuelle complet quel qu'en soit la langue.",
+  "Mémoire améliorée pour les images : capacité à reproduire une image de mémoire, à identifier immédiatement une personne déjà vu…",
+  "Mémoire améliorée pour les sons : capacité à mémoriser l'intégralité d'une discussion, la texture d'un son, son origine, ses intonations."],
+ "Naviguer":["Capitaine : sait commander un bateau","Navigateur : sait diriger un bateau","Amiral : bonus en stratégie maritime, anticipation des actions du capitaine adverse"],
+ "Plantes & Poisons":["Récolte doublée : deux fois plus de plantes récoltées ou trouvés","Cultivateur : capacité à planter et s'occuper de plante de tous type","Poisons à la carte : capacité à moduler les effets poisons"],
+ "Connaissance":["Expert réputé : réputation de connaisseur","Professeur : rayonnement, bonus au groupe de +10","Erudit : ouvre un autre champ de Connaissance"],
+ "Lire & Ecrire":["Décrypter un code","Ecriture artistique (écrivain, poète)","Lecture rapide"],
+ "Eloquence":["Prise de parole plus simple en public : pas d'émeute, pas de lynchage, le calme est installé.",
+  "Donner des ordres est plus simple : l'obéissance est plus facilement acquise, et l'organisation de la foule à diriger plus efficace","Rayonnement, +5 aux Compétences de Communication du groupe"],
+ "Persuader":["Argument implacable : convaincre quelqu'un en changeant aisément son opinion (une fois par dialogue)",
+  "Jeu d'acteur, permet de mentir sans être détecté (une fois par dialogue)","Manipulation, permet de faire faire quelque chose à quelqu'un même contre son alignement (une fois par dialogue)"],
+ "Charmer":["Séduction de la gent masculine","Séduction de la gent féminine","Charmer les animaux"],
+ "Marchander":["Gestion d'un commerce, le personnage peut désormais gérer sans problème une boutique","Négocier, le personnage peut aller jusqu'à acheter les objets à -50%","Prix des objets augmentés, le personnage revend ses objets plus chers"],
+ "Intimider":["Maître chanteur, le chantage fonctionne mieux","Intimider physiquement, même à l'encontre du physique","Intimider psychologiquement, la cible devient plus sensible"],
+ "Instinct de la rue":["Points d'intérêt reconnu automatiquement","Connaître les ragots, réussite automatique","Les gens savent que le PJ est dans la ville si celui-ci le souhaite"],
+ "Equilibre":["Rayonnement : +10 au groupe","Equilibre martial : permet de faire chuter un adversaire","Ne peut plus chuter et être déséquilibré"],
+ "Ecouter":["Reconnaitre des voix : capacité à établir un profil précis de la personne.","Reconnaître des sons : capacité à distinguer un environnement de meuble, de rituel, ect.","Ouïe développée : entendre 15m plus loin."],
+ "Sentir":["Reconnaître l'odeur des gens : capacité à établir un profil précis de la personne.","Reconnaître l'odeur des animaux : capacité à établir un profil précis de l'animal.","Nez (autres odeurs) : capacité à reconnaitre des poisons, ou d'autres senteurs."],
+ "Chercher":["Trouver Objets Cachés","Trouver une personne efficacement, les jets de renseignements sont réussis","Trouver un lieu, les jets d'Orientation sont réussis"],
+ "Voir":["Augmentation de l'oeil (Vision nocturne/Nyctalopie)","Vision d'aigle, permet de voir 15 mètres plus loin","Détection des camouflages, perce Déguisement (non-magique)"],
+ "Goûter":["Détection des poisons","Manger rend plus de santé, multiplié par deux","Moins besoin de manger, permet également de résister aux malus de Constitution de la faim"],
+ "Pister":["Repérer une fausse piste","Filature indétectable","Traque, dégâts doublés sur une cible en fuite"],
+ "Grimper":["Trouver des voies naturelles plus rapidement","Parcours : grimper en ville sur des objets non naturelles","Premier de cordée : l'équipe bénéficie d'un bonus de +10 en Grimper"],
+ "Athlétisme":["Sprint, vitesse de course multiplié par deux","Marathon, durée de la course ou de l'effort multiplié par deux","Rayonnement : l'équipe bénéficie d'un +10 en Athlétisme"],
+ "Sauter":["Sauter plus haut, multiplié par deux la distance de saut","Sauter plus loin, multiplié par deux la hauteur de saut","Rayonnement : l'équipe bénéficie d'un +10 en Sauter"],
+ "Equitation":["Combat à cheval : faire juste le jet d'attaque, sans la moyenne d'Equitation et d'attaque.","Attelage, conduire n'importe quel véhicule tracté","Palefrenier, améliore le cheval et permet de le soigner"],
+ "Nager":["Plongée plus longue : temps d'apnée multiplié par deux","Sprint, vitesse de nage multipliée par deux","Rayonnement : +10 au groupe."],
+ "Culbuter":["Souplesse, acrobaties facilitées","Bon rétablissement, dégâts de chute mais pas de blessures","Acrobate, capacité à faire un spectacle pour distraire l'attention"],
+ "Lutte":["Soumission : réussite automatique pour emmener un adversaire au sol et le paralyser 1d4 rounds",
+  "Projection : réussite automatique pour emmener un adversaire au sol en infligeant 1d6 dégâts de chute.","Croc-en-jambe : réussite automatique pour emmener un adversaire au sol et obtenir une attaque gratuite sur lui."],
+ "Jongler":["Représentation, distrait automatiquement les spectateurs","Réflexes améliorés, permet de jongler sans problèmes avec tout type d'objet","Lancer, permet d'utiliser sa compétence de Jonglage sur des lancers"],
+ "Crocheter":["Crochetage rapide, vitesse multipliée par deux","Crochetage improvisé, capacité à crocheter sans outil","Serrurier, rend tout mécanisme plus solide si le joueur y touche"],
+ "Passe-passe":["Vol à la tire, permet de voler plus facilement dans les poches des passants","Vol à l'étalage, permet de plus facilement voler ouvertement","Prestidigitation, permet de capter l'attention par des tours de magie"],
+ "Faire un piège":["Piège au sol, deux fois plus efficaces sur leurs dégâts","Pièges divers (tout sauf au sol), deux fois plus efficaces sur leurs dégâts","Objets fourbes, permet d'improviser des pièges à partir d'objet et d'en multipliez les dégâts"],
+ "Faire un nœud":["Ligoter sûrement, toute cible ligotée ne peut s'en défaire sans outils","Défaire ses liens, permet de se libérer plus facilement sans outils","Lasso, permet de fabriquer ou employer un lasso"],
+ "Artisanat":["Production intensive, permet de produire en deux fois moins de temps","Référence artisane : reconnu comme référence en la matière, bonus au prix des objets vendus.","Maître artisan : ouvre un autre artisanat"],
+ "Embuscade":["Stratège de l'embuscade, +10 sur le jet d'attaque par round d'attente","Tireur embusqué, bonus de +10 au tir/jet/lancer en cas d'Embuscade tant qu'il est caché","Combattant embusqué, bonus de +10 au combat sauf tir/jet/lancer en cas d'Embuscade tant qu'il est caché"],
+ "Dissimuler":["Cacher sur soi, un objet est indétectable.","Cacher dans une pièce, un objet est indétectable.","Pièce secrète, permet de construire des passages secrets, ou des cachettes"],
+ "Se cacher":["Dans la foule, permet de se fondre dans tout type de foule instantanément","Rayonnement, +10 au groupe pour se cacher.","Caméléon de l'ombre : se fond dans l'ombre si le PJ ne bouge pas, contre également la magie"],
+ "Mouvement silencieux":["Pied léger, ne déclenche pas les pièges","Ninja, plus rapide quand il est silencieux","Rayonnement : offre un +10 en Mouvement silencieux au reste du groupe"],
+ "Déguisement":["Déguisement improvisé, permet de se déguiser sans déguisement","Usurpation d'identité, permet d'adopter le comportement et l'apparence d'un personnage","Transformiste, permet de se déguiser plus vite, voir successivement"],
+};
+
 window.ADA.DATA = {STATS,STAT_LABELS,RACES,CLASSES_BASE,CLASSES_SPECIAL,SKILL_CATEGORIES,CATEGORY_STAT,
- NATURAL_TRAITS,WEAPON_BRANCHES,ARMOR_BRANCHES,DIE_RANKS,MAGIC_SCHOOLS,MAGIC_LEVEL_DICE,ARCANES,SOCIAL_CLASSES,LANGUAGES,RELIGIONS};
+ NATURAL_TRAITS,WEAPON_BRANCHES,ARMOR_BRANCHES,DIE_RANKS,MAGIC_SCHOOLS,MAGIC_LEVEL_DICE,ARCANES,SOCIAL_CLASSES,LANGUAGES,RELIGIONS,MASTERIES};
 })();
 </script>
 <script>
@@ -683,9 +743,10 @@ function freshState(){
     identity:{name:"",player:"",align:"",eyes:"",hair:"",height:"",desc:""},
     raceId:null, raceChoiceBonuses:[],
     classMainId:null, classSecondaryId:null,
-    arcaneMain:null, deityId:null, guerrierWeaponId:null,
+    arcaneMain:null, deityId:null, guerrierWeaponId:null, vampireChoice:null,
     rolls:[], rollUsed:[], statRollIndex:{FOR:null,CON:null,INT:null,DEX:null,CHA:null,CHANCE:null},
     civil:{}, // "Compétence": points
+    masteries:{}, // "Compétence": ["texte de la maîtrise choisie", ...] (compétence à 100 → 80)
     traitFree:null, traitPairs:[], // [{pos:"Skill",neg:"Skill"}]
     weaponStatChoice:"FOR",
     weapon:{ branches:{} }, // id -> {unlocked,mastery,chances,de,crit}
@@ -694,6 +755,7 @@ function freshState(){
     socialClassId:"moyenne",
     languages:[],
     equipmentText:"", historyText:"",
+    level:1, xp:0, curPV:null, curGold:null, // suivi en jeu (fiche finale) — curPV/curGold null = valeur de départ calculée
     step:0,
   };
 }
@@ -741,6 +803,13 @@ function magicMasterySpent(){ return Object.values(state.magic.schools).reduce((
 function pvValue(){ const f=statFinal("FOR"), c=statFinal("CON"); if(f==null||c==null) return null; return Math.round((f+c)/2); }
 function goldStart(){ const sc=D.SOCIAL_CLASSES.find(s=>s.id===state.socialClassId); if(!sc) return 0; return Math.min(1000, Math.floor(sc.salary/2)); }
 function languageCount(){ const m=statModFinal("INT"); if(m==null) return 1; return Math.max(0,m)+1; }
+// Suivi en jeu (fiche finale) : PV/or "actuels" partent de la valeur de départ calculée, mais peuvent
+// être mis à jour manuellement par le joueur au fil de la campagne (dégâts, dépenses...).
+function currentPV(){ return state.curPV!=null ? state.curPV : pvValue(); }
+function currentGold(){ return state.curGold!=null ? state.curGold : goldStart(); }
+// Chapitre X : l'échelle d'expérience (niveau -> montant requis pour accéder au niveau supérieur).
+const XP_THRESHOLDS = {1:100,2:200,3:300,4:400,5:500,6:600,7:700,8:800,9:900,10:1000};
+function nextLevelXP(){ return XP_THRESHOLDS[state.level] || null; }
 
 function traitBonuses(){ // renvoie map skill -> total bonus des traits naturels choisis
   const map={};
@@ -766,6 +835,11 @@ function fixedSkillSources(){
   addFrom(getRace(), "race");
   addFrom(getClass(state.classMainId), "classe");
   addFrom(getClass(state.classSecondaryId), "classe 2nd");
+  // Vampire : "Vampire vénérable" (>250 ans) donne +10 en Savoir (catégorie entière). L'autre choix,
+  // "Fougue de la jeunesse", donne +10 en Combat — hors compétences civiles, géré dans l'arbre de combat.
+  if(state.raceId==="vampire" && state.vampireChoice==="venerable"){
+    (D.SKILL_CATEGORIES["Savoir"]||[]).forEach(sk=> sources.push({label:"race (Vampire vénérable)", skill:sk, amount:10}));
+  }
   return sources;
 }
 function fixedSkillBonuses(){
@@ -873,6 +947,14 @@ function renderStep1(root){
    </div>
    ${race? renderRaceDetail(race) : ""}
 
+   ${state.raceId==="vampire"?`
+   <h3 style="margin-top:1.6rem">Âge du vampire <small class="help">(détermine le trait racial actif)</small></h3>
+   <div class="field"><label>Choix</label>
+     <select id="f-vampirechoice"><option value="">— choisir —</option>
+       <option value="jeunesse" ${state.vampireChoice==="jeunesse"?"selected":""}>Fougue de la jeunesse (moins de 250 ans) : +10 en Combat</option>
+       <option value="venerable" ${state.vampireChoice==="venerable"?"selected":""}>Vampire vénérable (plus de 250 ans) : +10 en Savoir</option>
+     </select></div>`:""}
+
    <h3 style="margin-top:1.6rem">Classe principale</h3>
    <div class="pick-grid">
      ${D.CLASSES_BASE.map(c=>`<div class="card-pick ${state.classMainId===c.id?'selected':''}" data-classmain="${c.id}">
@@ -933,6 +1015,7 @@ function renderStep1(root){
   const fa=$("#f-arcane"); if(fa) fa.addEventListener("change", e=>{state.arcaneMain=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
   const fd=$("#f-deity"); if(fd) fd.addEventListener("change", e=>{state.deityId=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
   const fw=$("#f-guerrierweapon"); if(fw) fw.addEventListener("change", e=>{state.guerrierWeaponId=e.target.value||null; saveState(); renderSummary();});
+  const fv=$("#f-vampirechoice"); if(fv) fv.addEventListener("change", e=>{state.vampireChoice=e.target.value||null; saveState(); renderSummary();});
   $$("#race-grid .card-pick").forEach(el=> el.addEventListener("click", ()=>{ state.raceId=el.dataset.race; state.raceChoiceBonuses=[]; saveState(); renderStep1(root); renderSummary(); }));
   $$("[data-classmain]").forEach(el=> el.addEventListener("click", ()=>{ state.classMainId=el.dataset.classmain||null; saveState(); renderStep1(root); renderSummary(); }));
   $$("[data-classsec]").forEach(el=> el.addEventListener("click", ()=>{ state.classSecondaryId=el.dataset.classsec||null; saveState(); renderStep1(root); renderSummary(); }));
@@ -976,6 +1059,7 @@ document.addEventListener("change", e=>{
 window.ADA.core = {D,ALL_WEAPON_BRANCHES,$,$$,esc,state,saveState,mod,getRace,getClass,getArcane,getDeity,hasClass,statBase,statFinal,statModFinal,
  civilBudget,civilSpent,weaponPoolBase,weaponArbrePoints,weaponMasteryPoints,weaponArbreSpent,weaponMasterySpent,
  magicPoolBase,magicArbrePoints,magicMasteryPoints,magicArbreSpent,magicMasterySpent,pvValue,goldStart,languageCount,
+ currentPV,currentGold,XP_THRESHOLDS,nextLevelXP,
  traitBonuses,racialSkillNote,fixedSkillSources,fixedSkillBonuses,allSkillBonuses,d6,roll4d6drop,STEPS,go,renderRail,renderSummary,renderStep1,fmtBonus};
 })();
 </script>
@@ -1080,9 +1164,11 @@ function renderStep2(root){
 /* ---------- STEP 3 : compétences civiles ---------- */
 function renderStep3(root){
   const s=core.state;
+  if(!s.masteries) s.masteries={};
   root.innerHTML = `
-   <div class="step-head"><div><div class="eyebrow">Chapitre III</div><h2>Compétences civiles</h2></div></div>
-   <p class="help" style="color:var(--ink-soft)">Le budget de chaque catégorie = valeur de la caractéristique associée × 6. Score plafonné à 100 (ramené à 80 en jeu).</p>
+   <div class="step-head"><div><div class="eyebrow">Chapitre III</div><h2>Compétences civiles</h2></div>
+     <button class="btn ghost small no-print" id="resetSkills" title="Remet tous les points de compétences civiles à zéro et efface les maîtrises choisies">↺ Réinitialiser les compétences</button></div>
+   <p class="help" style="color:var(--ink-soft)">Le budget de chaque catégorie = valeur de la caractéristique associée × 6. Score plafonné à 100 (ramené à 80 en jeu, avec choix d'une maîtrise).</p>
    <div id="catList"></div>
    <div class="step-foot no-print"><button class="btn secondary" id="prev3">← Précédent</button><button class="btn" id="next3">Étape suivante →</button></div>`;
   function paint(){
@@ -1094,15 +1180,26 @@ function renderStep3(root){
         ${D.SKILL_CATEGORIES[cat].map(sk=>{
           const b=core.allSkillBonuses()[sk];
           const bonusTitle = b? b.parts.map(p=>`${p.label} ${p.amount>0?"+":""}${p.amount}`).join(", ") : "";
-          const total = Math.min(100,(s.civil[sk]||0)+(b?b.total:0));
+          const rawTotal = (s.civil[sk]||0)+(b?b.total:0);
+          const cappedTotal = Math.min(100, rawTotal);
+          const mastered = cappedTotal>=100;
+          const scoreLabel = mastered ? "100 → 80 (maîtrise)" : (b? ((b.total>0?"+":"")+b.total+" → "+cappedTotal) : "");
+          const chosen = s.masteries[sk]||[];
           return `<div class="skillrow">
             <span class="name">${esc(sk)}</span>
-            <span class="bonus" ${bonusTitle?`title="${esc(bonusTitle)}"`:""}>${b?((b.total>0?"+":"")+b.total+" → "+total):""}</span>
+            <span class="bonus" ${bonusTitle?`title="${esc(bonusTitle)}"`:""}>${scoreLabel}</span>
             <span class="stepper">
               <button data-dec="${esc(sk)}" type="button">–</button>
               <input type="number" min="0" max="100" data-skill="${esc(sk)}" value="${s.civil[sk]||0}">
               <button data-inc="${esc(sk)}" type="button">+</button>
-            </span></div>`;
+            </span></div>
+            ${mastered? `<div class="note" style="margin:.2rem 0 .7rem">
+              <b>Maîtrise de ${esc(sk)}</b> <small class="help">— choisissez une option (Artisanat et Connaissance peuvent en cumuler plusieurs, voir leur option « ouvre un autre champ »)</small>
+              ${(D.MASTERIES[sk]||[]).map((opt,i)=>`<label style="display:flex;gap:.5rem;align-items:flex-start;margin-top:.5rem;font-size:.85rem;cursor:pointer">
+                <input type="checkbox" data-masterychoice="${esc(sk)}" data-idx="${i}" ${chosen.includes(opt)?"checked":""} style="margin-top:.2rem">
+                <span>${esc(opt)}</span>
+              </label>`).join("")}
+            </div>` : ""}`;
         }).join("")}
       </details>`;
     }).join("");
@@ -1110,9 +1207,18 @@ function renderStep3(root){
       let v=parseInt(e.target.value,10); if(isNaN(v)||v<0) v=0; if(v>100) v=100;
       s.civil[e.target.dataset.skill]=v; core.saveState(); paint(); core.renderSummary();
     }));
-    $$("#catList [data-inc]").forEach(b=> b.addEventListener("click", ()=>{ const sk=b.dataset.inc; s.civil[sk]=(s.civil[sk]||0)+1; core.saveState(); paint(); core.renderSummary(); }));
+    $$("#catList [data-inc]").forEach(b=> b.addEventListener("click", ()=>{ const sk=b.dataset.inc; s.civil[sk]=Math.min(100,(s.civil[sk]||0)+1); core.saveState(); paint(); core.renderSummary(); }));
     $$("#catList [data-dec]").forEach(b=> b.addEventListener("click", ()=>{ const sk=b.dataset.dec; s.civil[sk]=Math.max(0,(s.civil[sk]||0)-1); core.saveState(); paint(); core.renderSummary(); }));
+    $$("#catList [data-masterychoice]").forEach(cb=> cb.addEventListener("change", e=>{
+      const sk=e.target.dataset.masterychoice; const idx=parseInt(e.target.dataset.idx,10);
+      const opt=(D.MASTERIES[sk]||[])[idx]; if(opt==null) return;
+      if(!s.masteries[sk]) s.masteries[sk]=[];
+      if(e.target.checked){ if(!s.masteries[sk].includes(opt)) s.masteries[sk].push(opt); }
+      else { s.masteries[sk]=s.masteries[sk].filter(x=>x!==opt); }
+      core.saveState(); core.renderSummary();
+    }));
   }
+  $("#resetSkills").addEventListener("click", ()=>{ s.civil={}; s.masteries={}; core.saveState(); paint(); core.renderSummary(); });
   $("#prev3").addEventListener("click", ()=>core.go(1));
   $("#next3").addEventListener("click", ()=>core.go(3));
   paint();
@@ -1196,11 +1302,12 @@ function renderTreeStep(root, opts){
       ${groups[g].map(b=>{
         const bs=branchState(b.id);
         const classBonus = (core.state.guerrierWeaponId===b.id && core.hasClass("guerrier")) ? 10 : 0;
-        const masteryVal = bs.unlocked ? 25+(bs.mastery||0)+classBonus : 0;
+        const vampireBonus = (core.state.raceId==="vampire" && core.state.vampireChoice==="jeunesse" && (b.kind==="weapon"||b.kind==="armor")) ? 10 : 0;
+        const masteryVal = bs.unlocked ? 25+(bs.mastery||0)+classBonus+vampireBonus : 0;
         return `<div class="branch">
           <div class="bhead">
-            <h4>${esc(b.name)}${b.stat?` <small class="help">(${b.stat})</small>`:""}${classBonus?` <small class="help" style="color:var(--gold)">+10 don Guerrier</small>`:""}</h4>
-            ${bs.unlocked? `<span class="mastery tabular">${Math.min(masteryVal,100)}%</span>` : `<button class="btn small no-print" data-unlock="${b.id}" ${arbreLeft<1?"disabled":""}>Débloquer (1 pt d'arbre)</button>`}
+            <h4>${esc(b.name)}${b.stat?` <small class="help">(${b.stat})</small>`:""}${classBonus?` <small class="help" style="color:var(--gold)">+10 don Guerrier</small>`:""}${vampireBonus?` <small class="help" style="color:var(--gold)">+10 fougue de la jeunesse</small>`:""}</h4>
+            ${bs.unlocked? `<span class="mastery tabular">${Math.min(masteryVal,100)}%</span><button class="btn ghost small no-print" data-lock="${b.id}" title="Réinitialise cette branche et rend les points d'arbre et de maîtrise dépensés dessus">✕ Réinitialiser</button>` : `<button class="btn small no-print" data-unlock="${b.id}" ${arbreLeft<1?"disabled":""}>Débloquer (1 pt d'arbre)</button>`}
           </div>
           ${bs.unlocked? renderBranchBody(b,bs,arbreLeft,masteryLeft) : ""}
         </div>`;
@@ -1249,6 +1356,10 @@ function renderTreeStep(root, opts){
     $$("#branchZone [data-unlock]").forEach(btn=> btn.addEventListener("click", ()=>{
       if(opts.arbrePts()-opts.arbreSpent()<1) return;
       branchState(btn.dataset.unlock).unlocked=true; core.saveState(); paint(); core.renderSummary();
+    }));
+    $$("#branchZone [data-lock]").forEach(btn=> btn.addEventListener("click", ()=>{
+      opts.store()[btn.dataset.lock] = {unlocked:false, mastery:0, chances:0, de:0, crit:0};
+      core.saveState(); paint(); core.renderSummary();
     }));
     $$("#branchZone [data-node]").forEach(n=> n.addEventListener("click", ()=>{
       const [bid,key,idx]=n.dataset.node.split("|"); const bs=branchState(bid); const i=parseInt(idx,10);
@@ -1393,11 +1504,19 @@ function renderStep8(root){
     try{
       const downloads = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null;
       if(downloads){ $("#exportBtn").style.display=""; $("#exportBtn").addEventListener("click", ()=>doExport(downloads)); }
-      else { $("#exportStatus").textContent = "Téléchargement indisponible dans cet affichage : utilisez « Imprimer directement »."; }
+      else { promotePrintBtn(); }
     }catch(e){
-      $("#exportStatus").textContent = "Téléchargement indisponible dans cet affichage : utilisez « Imprimer directement ».";
+      promotePrintBtn();
     }
   })();
+  function promotePrintBtn(){
+    // Le téléchargement natif n'existe que dans l'aperçu artefact de Claude. Sur un site
+    // normal (GitHub Pages, ouverture directe du fichier...) l'impression navigateur
+    // fonctionne sans restriction : on la met simplement en avant, sans message d'erreur.
+    const pb = $("#printBtn");
+    pb.classList.remove("secondary");
+    pb.textContent = "🖨 Imprimer / Enregistrer en PDF";
+  }
 
   async function doExport(downloads){
     const status=$("#exportStatus");
@@ -1453,6 +1572,10 @@ button.printme{font-family:inherit;background:var(--gold);color:#fff7e9;border:n
 .stat-card .lbl{font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
 .stat-card .val{font-size:2.1rem;font-weight:600}
 .stat-card .mod{font-size:.85rem;color:var(--gold)}
+.trackcard{border:1px solid var(--border);border-radius:8px;padding:.9rem .8rem 1.1rem;background:var(--surface);text-align:center;min-height:5.6rem}
+.trackcard .lbl{font-family:"Cinzel",serif;font-size:.72rem;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
+.trackcard input{width:100%;margin-top:.35rem;font-size:1.7rem;font-weight:600;text-align:center;background:transparent;border:none;border-bottom:1px dashed var(--border);border-radius:0;padding:.25rem .2rem .45rem;color:var(--ink);font-family:inherit}
+.trackcard .sub{font-size:.68rem;color:var(--ink-faint);margin-top:.35rem}
 .pillrow{display:flex;flex-wrap:wrap;gap:.3rem}
 .badge{display:inline-flex;align-items:center;gap:.3em;font-size:.72rem;border-radius:99px;padding:.15em .65em;border:1px solid var(--border);color:var(--ink-soft);background:var(--surface)}
 .badge.pos{color:var(--good);border-color:var(--good)}
@@ -1463,6 +1586,7 @@ table.simple td{border-bottom:1px solid var(--border-soft);padding:.35em .5em;te
   body{background:#fff;padding:0}
   .exp-top button, .no-print{display:none !important}
   .sheet .block{break-inside:avoid;border-color:#999}
+  .trackcard input{border-bottom:1px solid #999}
 }
 </style></head>
 <body>
@@ -1493,15 +1617,21 @@ ${sheetHtml}
     const civilBlocks = Object.keys(D.SKILL_CATEGORIES).map(cat=>`
       <div class="block"><h4>${cat}</h4><table class="simple"><tbody>
         ${D.SKILL_CATEGORIES[cat].map(sk=>{
-          const base=s.civil[sk]||0, b=core.allSkillBonuses()[sk], tb=b?b.total:0, tot=Math.min(100,base+tb);
+          const base=s.civil[sk]||0, b=core.allSkillBonuses()[sk], tb=b?b.total:0;
+          const capped=Math.min(100,base+tb), mastered=capped>=100, tot=mastered?80:capped;
           const title = b? b.parts.map(p=>`${p.label} ${p.amount>0?"+":""}${p.amount}`).join(", ") : "";
-          return `<tr><td>${esc(sk)}</td><td class="tabular" style="text-align:right" ${title?`title="${esc(title)}"`:""}>${tot}${tb?` <small style="color:var(--gold)">(${base}${tb>0?"+":""}${tb})</small>`:""}</td></tr>`;
+          return `<tr><td>${esc(sk)}${mastered?` <small style="color:var(--gold)">★</small>`:""}</td><td class="tabular" style="text-align:right" ${title?`title="${esc(title)}"`:""}>${tot}${mastered?` <small style="color:var(--gold)">(maîtrise)</small>`:(tb?` <small style="color:var(--gold)">(${base}${tb>0?"+":""}${tb})</small>`:"")}</td></tr>`;
         }).join("")}
       </tbody></table></div>`).join("");
+    const masteredSkills = Object.keys(s.masteries||{}).filter(sk=> (s.masteries[sk]||[]).length);
+    const masteriesBlock = masteredSkills.length ? `<div class="block"><h4>Maîtrises</h4>
+      ${masteredSkills.map(sk=>`<p><b>${esc(sk)}</b><br>${(s.masteries[sk]||[]).map(esc).join("<br>")}</p>`).join("")}
+     </div>` : "";
     const weaponBlocks = D.WEAPON_BRANCHES.concat(D.ARMOR_BRANCHES).filter(b=> (s.weapon.branches[b.id]||{}).unlocked).map(b=>{
       const bs=s.weapon.branches[b.id]; const classBonus=(s.guerrierWeaponId===b.id && core.hasClass("guerrier"))?10:0;
-      const m=Math.min(100,25+(bs.mastery||0)+classBonus);
-      return `<tr><td>${esc(b.name)}${classBonus?` <small style="color:var(--gold)">(+10 don)</small>`:""}</td><td class="tabular" style="text-align:right">${m}%</td><td style="text-align:right">${(bs.chances+bs.de+bs.crit)>=9?"★ capacité":((bs.chances||0)+(bs.de||0)+(bs.crit||0))+"/9"}</td></tr>`;
+      const vampireBonus=(s.raceId==="vampire" && s.vampireChoice==="jeunesse")?10:0;
+      const m=Math.min(100,25+(bs.mastery||0)+classBonus+vampireBonus);
+      return `<tr><td>${esc(b.name)}${classBonus?` <small style="color:var(--gold)">(+10 don)</small>`:""}${vampireBonus?` <small style="color:var(--gold)">(+10 fougue)</small>`:""}</td><td class="tabular" style="text-align:right">${m}%</td><td style="text-align:right">${(bs.chances+bs.de+bs.crit)>=9?"★ capacité":((bs.chances||0)+(bs.de||0)+(bs.crit||0))+"/9"}</td></tr>`;
     }).join("");
     const magicBlocks = D.MAGIC_SCHOOLS.map(sc=> sc.sub.map(sub=>{
       const id=sc.id+"-"+sub; const bs=s.magic.schools[id];
@@ -1522,19 +1652,27 @@ ${sheetHtml}
      </div>
 
      <div class="block">
-      <h4>Caractéristiques &amp; ressources</h4>
+      <h4>Caractéristiques</h4>
       <div class="stat-grid">
        ${D.STATS.map(st=>`<div class="stat-card"><div class="lbl">${st}</div><div class="val tabular">${core.statFinal(st)??"–"}</div><div class="mod tabular">${core.statModFinal(st)!=null?((core.statModFinal(st)>=0?"+":"")+core.statModFinal(st)):""}</div></div>`).join("")}
       </div>
-      <div class="pillrow" style="margin-top:.8rem">
-        <span class="badge pos">PV ${core.pvValue()??"–"}</span>
-        <span class="badge">Or ${core.goldStart()} PO</span>
+     </div>
+
+     <div class="block">
+      <h4>Suivi en jeu <small class="help" style="text-transform:none;letter-spacing:0">(ces valeurs évoluent en jeu — mettez-les à jour ici)</small></h4>
+      <div class="stat-grid">
+       <div class="trackcard"><div class="lbl">Niveau</div><input type="number" id="trk-level" min="1" value="${s.level||1}"><div class="sub">${core.nextLevelXP()!=null?("seuil niv. suiv. : "+core.nextLevelXP()+" XP"):""}</div></div>
+       <div class="trackcard"><div class="lbl">Expérience</div><input type="number" id="trk-xp" min="0" value="${s.xp||0}"><div class="sub">points d'XP cumulés</div></div>
+       <div class="trackcard"><div class="lbl">PV actuels</div><input type="number" id="trk-pv" value="${core.currentPV()??""}"><div class="sub">départ : ${core.pvValue()??"–"}</div></div>
+       <div class="trackcard"><div class="lbl">Or actuel</div><input type="number" id="trk-gold" value="${core.currentGold()??""}"><div class="sub">départ : ${core.goldStart()} PO</div></div>
       </div>
      </div>
 
      <div class="block"><h4>Langues</h4><p>${(s.languages&&s.languages.length)? s.languages.map(esc).join(" · ") : "Aucune sélectionnée ("+core.languageCount()+" disponible(s))"}</p></div>
 
-     <div class="block"><h4>Traits raciaux</h4><p>${race? race.traits.map(esc).join(" · ") : "—"}</p></div>
+     <div class="block"><h4>Traits raciaux</h4><p>${race? race.traits.map(esc).join(" · ") : "—"}</p>
+       ${(()=>{ if(s.raceId!=="vampire"||!s.vampireChoice) return ""; const label=s.vampireChoice==="jeunesse"?"Fougue de la jeunesse (moins de 250 ans) : +10 en Combat":"Vampire vénérable (plus de 250 ans) : +10 en Savoir"; return `<p style="margin-top:.4rem"><b>Âge choisi :</b> ${esc(label)}</p>`; })()}
+     </div>
 
      <div class="block"><h4>Traits naturels</h4><p>
        ${s.traitFree?`<span class="badge pos">${esc(s.traitFree.skill)} → ${esc(s.traitFree.label)} (+10)</span> `:""}
@@ -1555,10 +1693,16 @@ ${sheetHtml}
 
      <div class="block"><h4>Compétences civiles</h4><div class="two-col" style="grid-template-columns:repeat(3,1fr)">${civilBlocks}</div></div>
 
+     ${masteriesBlock}
+
      <div class="block"><h4>Arbre de combat</h4><table class="simple"><tbody>${weaponBlocks||"<tr><td>Aucune branche débloquée.</td></tr>"}</tbody></table></div>
 
      <div class="block"><h4>Arbre de magie</h4><table class="simple"><tbody>${magicBlocks||"<tr><td>Aucune sous-école débloquée.</td></tr>"}</tbody></table></div>
     `;
+    $("#trk-level").addEventListener("change", e=>{ let v=parseInt(e.target.value,10); if(isNaN(v)||v<1) v=1; s.level=v; core.saveState(); paintSheet(); });
+    $("#trk-xp").addEventListener("change", e=>{ let v=parseInt(e.target.value,10); if(isNaN(v)||v<0) v=0; s.xp=v; core.saveState(); });
+    $("#trk-pv").addEventListener("change", e=>{ const v=e.target.value===""?null:parseInt(e.target.value,10); s.curPV=(v==null||isNaN(v))?null:v; core.saveState(); });
+    $("#trk-gold").addEventListener("change", e=>{ const v=e.target.value===""?null:parseInt(e.target.value,10); s.curGold=(v==null||isNaN(v))?null:v; core.saveState(); });
   }
 }
 

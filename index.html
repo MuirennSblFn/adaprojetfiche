@@ -1,6 +1,11 @@
 <title>Forge de Personnage</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<!-- Sauvegarde en ligne (comptes joueurs) : bibliothèque Supabase, chargée depuis un CDN.
+     Si SUPA_URL / SUPA_ANON_KEY (voir plus bas) ne sont pas renseignés, ou si ce script ne charge pas
+     (pas de réseau, hébergement qui bloque les scripts externes...), l'outil continue de fonctionner
+     normalement en local (comme avant) : la sauvegarde cloud est une amélioration facultative. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============ TOKENS ============ */
 :root{
@@ -104,6 +109,25 @@ header.top{
   border-radius:8px;width:2.3rem;height:2.3rem;display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
 .icon-btn:hover{border-color:var(--accent)}
+
+/* ---- barre de compte / sauvegarde cloud ---- */
+#authBar{display:flex;align-items:center;justify-content:flex-end;gap:.6rem;flex-wrap:wrap;padding:.5rem 1.4rem;border-bottom:1px solid var(--border-soft);background:var(--surface-2);font-size:.82rem}
+#authBar:empty{display:none;padding:0;border-bottom:none}
+#authBar .authmsg{color:var(--ink-soft);margin-right:auto}
+#authBar form{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+#authBar input{padding:.4em .55em;font-size:.82rem;width:11rem}
+#authBar .authErr{color:var(--danger);font-size:.76rem;flex-basis:100%}
+#authBar .authOk{color:var(--good);font-size:.76rem;flex-basis:100%}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(20,14,4,.55);display:flex;align-items:center;justify-content:center;padding:1.5rem;z-index:100}
+.modal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);max-width:560px;width:100%;max-height:85vh;overflow:auto;padding:1.5rem 1.6rem}
+.modal-card h3{margin:0 0 .9rem}
+.modal-card .modal-close{float:right}
+.charlist{display:flex;flex-direction:column;gap:.6rem;margin:1rem 0}
+.charrow{display:flex;align-items:center;gap:.8rem;border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;background:var(--surface-2)}
+.charrow .cname{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.charrow .cdate{font-size:.72rem;color:var(--ink-faint)}
+.charrow .cactions{display:flex;gap:.4rem;flex:none}
 
 .layout{
   flex:1;display:grid;grid-template-columns:220px minmax(0,1fr) 300px;gap:1.2rem;
@@ -295,6 +319,8 @@ footer.site{text-align:center;color:var(--ink-faint);font-size:.75rem;padding:1.
     </div>
   </header>
 
+  <div id="authBar" class="no-print"></div>
+
   <div class="layout">
     <nav class="rail no-print" id="rail" aria-label="Étapes de création"></nav>
     <main class="card" id="stepRoot"></main>
@@ -306,6 +332,7 @@ footer.site{text-align:center;color:var(--ink-faint);font-size:.75rem;padding:1.
 
 <script>
 window.ADA = {}; // namespace, filled by subsequent scripts
+window.ADA._saveHooks = []; // callbacks appelés après chaque saveState() (utilisé par la sauvegarde cloud)
 </script>
 <script>
 /* =====================================================================
@@ -781,7 +808,10 @@ function freshState(){
   };
 }
 let state = loadState() || freshState();
-function saveState(){ try{ localStorage.setItem("ada_char_v1", JSON.stringify(state)); }catch(e){} }
+function saveState(){
+  try{ localStorage.setItem("ada_char_v1", JSON.stringify(state)); }catch(e){}
+  try{ window.ADA._saveHooks.forEach(fn=>{ try{ fn(); }catch(e){} }); }catch(e){}
+}
 function loadState(){ try{ const s=localStorage.getItem("ada_char_v1"); return s?JSON.parse(s):null; }catch(e){ return null; } }
 
 // Redimensionne l'image de portrait choisie (côté client, via canvas) avant de la stocker en data URL,
@@ -1155,7 +1185,7 @@ window.ADA.core = {D,ALL_WEAPON_BRANCHES,$,$$,esc,state,saveState,mod,getRace,ge
  civilBudget,civilSpent,weaponPoolBase,weaponArbrePoints,weaponMasteryPoints,weaponArbreSpent,weaponMasterySpent,
  magicPoolBase,magicArbrePoints,magicMasteryPoints,magicArbreSpent,magicMasterySpent,pvValue,goldStart,languageCount,
  currentPV,currentGold,XP_THRESHOLDS,nextLevelXP,dieAtRank,magicDieForLevel,
- traitBonuses,racialSkillNote,fixedSkillSources,fixedSkillBonuses,allSkillBonuses,d6,roll4d6drop,STEPS,go,renderRail,renderSummary,renderStep1,fmtBonus};
+ traitBonuses,racialSkillNote,fixedSkillSources,fixedSkillBonuses,allSkillBonuses,d6,roll4d6drop,STEPS,go,renderRail,renderSummary,renderStep1,fmtBonus,freshState};
 })();
 </script>
 <script>
@@ -1866,6 +1896,223 @@ window.ADA.core.renderStep8=renderStep8;
 </script>
 <script>
 /* =====================================================================
+   COMPTE & SAUVEGARDE CLOUD (Supabase) — entièrement facultatif.
+   Renseigne les deux constantes ci-dessous (URL du projet + clé publique "anon") après avoir suivi
+   le guide de configuration fourni à côté de ce fichier. Tant qu'elles sont vides — ou si la librairie
+   Supabase ne charge pas (pas de réseau, hébergement qui bloque les scripts externes...) — l'outil
+   fonctionne exactement comme avant : sauvegarde locale uniquement, aucune barre de compte affichée.
+   ===================================================================== */
+(function(){
+"use strict";
+const SUPA_URL = "https://hqdmhbxrejocscvpqdgk.supabase.co/rest/v1/";       // ex. "https://xxxxxxxxxxxx.supabase.co"
+const SUPA_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZG1oYnhyZWpvY3NjdnBxZGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NzczMDYsImV4cCI6MjEwMzE1MzMwNn0.zobPwDqDHsJgccjZedUHq6Q3Sj-0gZfNySjmS5XaMx4";  // clé publique "anon" (ce n'est PAS un secret, elle est faite pour être ici)
+
+const core = window.ADA.core, D=core.D, $=core.$, $$=core.$$, esc=core.esc;
+const LS_CHAR_ID = "ada_current_char_id";
+
+let sb = null;
+try{
+  if(SUPA_URL && SUPA_ANON_KEY && window.supabase && typeof window.supabase.createClient==="function"){
+    sb = window.supabase.createClient(SUPA_URL, SUPA_ANON_KEY);
+  }
+}catch(e){ sb = null; }
+
+function cloudEnabled(){ return !!sb; }
+let authSession = null;
+let syncTimer = null;
+let syncStatusText = "";
+
+/* ---------- sync vers le cloud (débouncé, déclenché après chaque saveState()) ---------- */
+function scheduleCloudSync(){
+  if(!cloudEnabled() || !authSession) return;
+  const charId = localStorage.getItem(LS_CHAR_ID);
+  if(!charId) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=>pushToCloud(charId), 1200);
+}
+function pushToCloud(charId){
+  if(!sb || !authSession) return;
+  const name = (core.state.identity && core.state.identity.name) || "Sans nom";
+  sb.from("characters").update({name, data: core.state}).eq("id", charId).then(({error})=>{
+    syncStatusText = error ? "Erreur de sauvegarde cloud — la sauvegarde locale reste à jour." : ("Sauvegardé en ligne · " + new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}));
+    updateSyncStatusEl();
+  }).catch(()=>{ syncStatusText = "Erreur de sauvegarde cloud — la sauvegarde locale reste à jour."; updateSyncStatusEl(); });
+}
+function updateSyncStatusEl(){ const el=document.getElementById("syncStatus"); if(el) el.textContent = syncStatusText; }
+window.ADA._saveHooks.push(scheduleCloudSync);
+
+/* ---------- barre de compte ---------- */
+function renderAuthBar(){
+  const bar = document.getElementById("authBar");
+  if(!bar) return;
+  if(!cloudEnabled()){ bar.innerHTML=""; return; }
+  if(!authSession){
+    bar.innerHTML = `<span class="authmsg">Sauvegarde en ligne disponible pour retrouver ta fiche plus tard.</span>
+      <button type="button" class="btn secondary small" id="authShowSignin">Se connecter</button>
+      <button type="button" class="btn small" id="authShowSignup">Créer un compte</button>`;
+    $("#authShowSignin").addEventListener("click", ()=>renderAuthForm("signin"));
+    $("#authShowSignup").addEventListener("click", ()=>renderAuthForm("signup"));
+  } else {
+    const linked = !!localStorage.getItem(LS_CHAR_ID);
+    bar.innerHTML = `<span class="authmsg">Connecté : ${esc(authSession.user.email)}${linked?"":" — aucun personnage sauvegardé ouvert"}</span>
+      <span id="syncStatus" class="authmsg" style="margin-right:0"></span>
+      <button type="button" class="btn secondary small" id="authMyChars">Mes personnages</button>
+      <button type="button" class="btn ghost small" id="authSignOut">Se déconnecter</button>`;
+    updateSyncStatusEl();
+    $("#authMyChars").addEventListener("click", openCharPicker);
+    $("#authSignOut").addEventListener("click", async ()=>{
+      const wasLinked = !!localStorage.getItem(LS_CHAR_ID);
+      try{ await sb.auth.signOut(); }catch(e){}
+      authSession = null;
+      if(wasLinked){
+        // Si un personnage sauvegardé était ouvert, on efface la copie de travail locale en se déconnectant :
+        // sur un appareil partagé entre joueurs, la personne suivante ne doit pas voir/récupérer ce personnage.
+        try{ localStorage.removeItem("ada_char_v1"); localStorage.removeItem(LS_CHAR_ID); }catch(e){}
+        location.reload();
+      } else {
+        renderAuthBar();
+      }
+    });
+  }
+}
+
+function renderAuthForm(mode){
+  const bar = document.getElementById("authBar");
+  const isSignup = mode==="signup";
+  bar.innerHTML = `<form id="authForm" class="no-print">
+      <input type="email" id="authEmail" placeholder="Email" autocomplete="email" required>
+      <input type="password" id="authPw" placeholder="Mot de passe" autocomplete="${isSignup?"new-password":"current-password"}" minlength="6" required>
+      <button type="submit" class="btn small">${isSignup?"Créer le compte":"Se connecter"}</button>
+      <button type="button" class="btn ghost small" id="authCancel">Annuler</button>
+      <span id="authMsg"></span>
+    </form>`;
+  $("#authCancel").addEventListener("click", renderAuthBar);
+  $("#authForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const email = $("#authEmail").value.trim(), pw = $("#authPw").value;
+    const msgEl = $("#authMsg");
+    msgEl.className=""; msgEl.textContent="Un instant…";
+    try{
+      if(isSignup){
+        const {data, error} = await sb.auth.signUp({email, password:pw});
+        if(error){ msgEl.className="authErr"; msgEl.textContent=fmtAuthError(error); return; }
+        if(data.session){ authSession=data.session; renderAuthBar(); openCharPicker(); }
+        else { msgEl.className="authOk"; msgEl.textContent="Compte créé ! Vérifie tes emails pour confirmer ton adresse, puis connecte-toi."; }
+      } else {
+        const {data, error} = await sb.auth.signInWithPassword({email, password:pw});
+        if(error){ msgEl.className="authErr"; msgEl.textContent=fmtAuthError(error); return; }
+        authSession = data.session; renderAuthBar();
+        if(!localStorage.getItem(LS_CHAR_ID)) openCharPicker();
+      }
+    }catch(err){ msgEl.className="authErr"; msgEl.textContent="Connexion au serveur impossible. Vérifie ta connexion internet."; }
+  });
+}
+function fmtAuthError(error){
+  const m = (error && error.message) || "";
+  if(/already registered|already exists/i.test(m)) return "Un compte existe déjà avec cet email.";
+  if(/invalid login credentials/i.test(m)) return "Email ou mot de passe incorrect.";
+  if(/password/i.test(m) && /6/.test(m)) return "Le mot de passe doit faire au moins 6 caractères.";
+  return m || "Une erreur est survenue.";
+}
+
+/* ---------- sélecteur de personnages ---------- */
+function closeModal(){ const b=document.querySelector(".modal-backdrop"); if(b) b.remove(); }
+async function openCharPicker(){
+  closeModal();
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop no-print";
+  backdrop.innerHTML = `<div class="modal-card">
+    <button type="button" class="btn ghost small modal-close" id="charClose">✕ Fermer</button>
+    <h3>Mes personnages</h3>
+    <p class="help" id="charListStatus">Chargement…</p>
+    <div class="charlist" id="charListRoot"></div>
+    <form id="newCharForm" style="display:flex;gap:.5rem;margin-top:.6rem">
+      <input type="text" id="newCharName" placeholder="Nom du nouveau personnage" style="flex:1">
+      <button type="submit" class="btn small">+ Nouveau personnage</button>
+    </form>
+    <div id="importRow" style="margin-top:.8rem"></div>
+  </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener("click", e=>{ if(e.target===backdrop) closeModal(); });
+  $("#charClose").addEventListener("click", closeModal);
+  $("#newCharForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const name = $("#newCharName").value.trim() || "Sans nom";
+    await createCharacter(name);
+  });
+
+  // proposer d'importer la fiche locale en cours si elle n'est pas déjà liée à un personnage sauvegardé
+  if(!localStorage.getItem(LS_CHAR_ID) && core.state.identity && core.state.identity.name){
+    const row = document.createElement("div");
+    row.innerHTML = `<button type="button" class="btn secondary small" id="importLocalBtn">Importer la fiche en cours (« ${esc(core.state.identity.name)} ») dans mon compte</button>`;
+    document.getElementById("importRow").appendChild(row);
+    document.getElementById("importLocalBtn").addEventListener("click", importLocalAsNewCharacter);
+  }
+
+  const {data, error} = await sb.from("characters").select("id,name,updated_at").order("updated_at",{ascending:false});
+  const statusEl = document.getElementById("charListStatus");
+  if(!statusEl) return; // modale déjà refermée entre-temps
+  if(error){ statusEl.textContent = "Impossible de charger tes personnages pour le moment."; return; }
+  if(!data || !data.length){ statusEl.textContent = "Aucun personnage sauvegardé pour l'instant."; return; }
+  statusEl.textContent = "";
+  const listRoot = document.getElementById("charListRoot");
+  listRoot.innerHTML = data.map(c=>`<div class="charrow" data-id="${esc(c.id)}">
+      <span class="cname">${esc(c.name||"Sans nom")}</span>
+      <span class="cdate">${esc(new Date(c.updated_at).toLocaleDateString("fr-FR"))}</span>
+      <span class="cactions">
+        <button type="button" class="btn small" data-open="${esc(c.id)}">Ouvrir</button>
+        <button type="button" class="btn ghost small" data-del="${esc(c.id)}" title="Supprimer">✕</button>
+      </span>
+    </div>`).join("");
+  $$("#charListRoot [data-open]").forEach(b=> b.addEventListener("click", ()=>openCharacter(b.dataset.open)));
+  $$("#charListRoot [data-del]").forEach(b=> b.addEventListener("click", ()=>deleteCharacterConfirm(b.dataset.del, b.closest(".charrow").querySelector(".cname").textContent)));
+}
+
+async function createCharacter(name){
+  if(!authSession) return;
+  const data = core.freshState();
+  data.identity.name = name;
+  const {data:row, error} = await sb.from("characters").insert({user_id: authSession.user.id, name, data}).select("id").single();
+  if(error){ alert("Impossible de créer le personnage : "+(error.message||"erreur inconnue")); return; }
+  localStorage.setItem("ada_char_v1", JSON.stringify(data));
+  localStorage.setItem(LS_CHAR_ID, row.id);
+  location.reload();
+}
+async function openCharacter(id){
+  const {data:row, error} = await sb.from("characters").select("data").eq("id", id).single();
+  if(error || !row){ alert("Impossible d'ouvrir ce personnage."); return; }
+  localStorage.setItem("ada_char_v1", JSON.stringify(row.data));
+  localStorage.setItem(LS_CHAR_ID, id);
+  location.reload();
+}
+async function importLocalAsNewCharacter(){
+  if(!authSession) return;
+  const name = (core.state.identity && core.state.identity.name) || "Sans nom";
+  const {data:row, error} = await sb.from("characters").insert({user_id: authSession.user.id, name, data: core.state}).select("id").single();
+  if(error){ alert("Impossible d'importer la fiche : "+(error.message||"erreur inconnue")); return; }
+  localStorage.setItem(LS_CHAR_ID, row.id);
+  location.reload();
+}
+function deleteCharacterConfirm(id, name){
+  if(!confirm("Supprimer définitivement « "+name+" » ? Cette action est irréversible.")) return;
+  sb.from("characters").delete().eq("id", id).then(({error})=>{
+    if(error){ alert("Impossible de supprimer ce personnage."); return; }
+    if(localStorage.getItem(LS_CHAR_ID)===id) localStorage.removeItem(LS_CHAR_ID);
+    openCharPicker(); // rafraîchit la liste
+  });
+}
+
+window.ADA.__cloud = {cloudEnabled}; // exposé pour d'éventuels tests / diagnostics
+
+/* ---------- démarrage ---------- */
+if(cloudEnabled()){
+  sb.auth.getSession().then(({data})=>{ authSession = data.session; renderAuthBar(); }).catch(()=>{ renderAuthBar(); });
+  sb.auth.onAuthStateChange((_event, session)=>{ authSession = session; renderAuthBar(); });
+}
+})();
+</script>
+<script>
+/* =====================================================================
    INIT
    ===================================================================== */
 (function(){
@@ -1890,8 +2137,8 @@ document.getElementById("themeToggle").addEventListener("click", ()=>{
   applyTheme(next);
 });
 document.getElementById("resetBtn").addEventListener("click", ()=>{
-  if(!confirm("Recommencer une nouvelle fiche ? Toute la progression actuelle sera perdue.")) return;
-  try{ localStorage.removeItem("ada_char_v1"); }catch(e){}
+  if(!confirm("Recommencer une nouvelle fiche ? Toute la progression actuelle sera perdue (le personnage restera sauvegardé dans ton compte si tu en avais ouvert un — utilise « Mes personnages » pour le retrouver).")) return;
+  try{ localStorage.removeItem("ada_char_v1"); localStorage.removeItem("ada_current_char_id"); }catch(e){}
   location.reload();
 });
 

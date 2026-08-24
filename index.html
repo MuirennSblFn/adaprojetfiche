@@ -804,6 +804,13 @@ function freshState(){
     languages:[],
     equipmentText:"", historyText:"",
     level:1, xp:0, curPV:null, curGold:null, // suivi en jeu (fiche finale) — curPV/curGold null = valeur de départ calculée
+    // Bonus cumulés via l'assistant de passage de niveau (Chapitre X, p.82) — s'ajoutent aux valeurs
+    // calculées à la création, sans jamais modifier les champs de création eux-mêmes.
+    levelStatBonus:{FOR:0,CON:0,INT:0,DEX:0,CHA:0,CHANCE:0}, // +1 choisi tous les 5 niveaux
+    levelCivilBonus:{Savoir:0,Communication:0,Physique:0,Manipulation:0,Discretion:0,Perception:0}, // pts de compétences civiles gagnés
+    levelWeaponMasteryBonus:0, levelMagicMasteryBonus:0, // pts de maîtrise combat/magie gagnés
+    weaponMasteryConverted:0, weaponArbreBonus:0, // conversion 5 pts maîtrise → 1 pt d'arbre (Chapitre VII p.4 / X p.82)
+    magicMasteryConverted:0, magicArbreBonus:0,
     step:0,
   };
 }
@@ -856,24 +863,29 @@ function statFinal(stat){
   if(race){ race.bonus.concat(race.malus).forEach(b=>{ if(b.stat!==stat) return;
     if(b.op==="mult") multFactor*=b.val; else if(b.op==="div") multFactor/=b.val; else addTotal+=b.val; }); }
   (state.raceChoiceBonuses||[]).forEach(s=>{ if(s===stat) addTotal+=1; });
-  return Math.round((base+addTotal)*multFactor);
+  // Bonus de +1 gagnés lors de passages de niveau (Chapitre X p.82 : "un point à l'une des
+  // caractéristiques" tous les 5 niveaux) — appliqués APRÈS le calcul racial, comme un +1 littéral.
+  const lvlBonus = (state.levelStatBonus && state.levelStatBonus[stat]) || 0;
+  return Math.round((base+addTotal)*multFactor) + lvlBonus;
 }
 function statModFinal(stat){ const v=statFinal(stat); return v==null?null:mod(v); }
-function civilBudget(cat){ const v=statFinal(D.CATEGORY_STAT[cat]); if(v==null) return 0; return Math.max(0,v)*6; }
+function civilBudget(cat){ const v=statFinal(D.CATEGORY_STAT[cat]); if(v==null) return 0; return Math.max(0,v)*6 + ((state.levelCivilBonus && state.levelCivilBonus[cat])||0); }
 function civilSpent(cat){ return D.SKILL_CATEGORIES[cat].reduce((s,sk)=> s+(state.civil[sk]||0),0); }
 function weaponPoolBase(){ const m=statModFinal(state.weaponStatChoice); return m==null?0:Math.max(1,m); }
-function weaponArbrePoints(){ return weaponPoolBase(); }
-function weaponMasteryPoints(){ return weaponPoolBase()*5; }
+function weaponArbrePoints(){ return weaponPoolBase() + (state.weaponArbreBonus||0); }
+function weaponMasteryPoints(){ return weaponPoolBase()*5 + (state.levelWeaponMasteryBonus||0); }
 function magicPoolBase(){ const m=statModFinal(state.magicStatChoice); return m==null?0:Math.max(1,m); }
-function magicArbrePoints(){ return magicPoolBase(); }
-function magicMasteryPoints(){ return magicPoolBase()*5; }
+function magicArbrePoints(){ return magicPoolBase() + (state.magicArbreBonus||0); }
+function magicMasteryPoints(){ return magicPoolBase()*5 + (state.levelMagicMasteryBonus||0); }
 
 function weaponArbreSpent(){
   let n=0;
   Object.values(state.weapon.branches).forEach(b=>{ if(b.unlocked) n+=1; n += (b.chances||0)+(b.de||0)+(b.crit||0); });
   return n;
 }
-function weaponMasterySpent(){ return Object.values(state.weapon.branches).reduce((s,b)=> s+(b.mastery||0),0); }
+// Les points de maîtrise convertis en points d'arbre (voir weaponArbreBonus) comptent comme "dépensés"
+// dans la réserve de maîtrise, pour ne pas pouvoir être réutilisés deux fois.
+function weaponMasterySpent(){ return Object.values(state.weapon.branches).reduce((s,b)=> s+(b.mastery||0),0) + (state.weaponMasteryConverted||0); }
 function magicArbreSpent(){
   let n=0;
   // 1 point d'arbre pour débloquer la branche + 1 point d'arbre par point de dégâts investi
@@ -881,7 +893,7 @@ function magicArbreSpent(){
   Object.values(state.magic.schools).forEach(b=>{ if(b.unlocked) n+=1; n += (b.dmgPts||0); });
   return n;
 }
-function magicMasterySpent(){ return Object.values(state.magic.schools).reduce((s,b)=> s+(b.mastery||0),0); }
+function magicMasterySpent(){ return Object.values(state.magic.schools).reduce((s,b)=> s+(b.mastery||0),0) + (state.magicMasteryConverted||0); }
 
 function pvValue(){ const f=statFinal("FOR"), c=statFinal("CON"); if(f==null||c==null) return null; return Math.round((f+c)/2); }
 function goldStart(){ const sc=D.SOCIAL_CLASSES.find(s=>s.id===state.socialClassId); if(!sc) return 0; return Math.min(1000, Math.floor(sc.salary/2)); }
@@ -1413,9 +1425,16 @@ function renderTreeStep(root, opts){
 
   function paintBudget(){
     const arbrePts=opts.arbrePts(), masteryPts=opts.masteryPts(), arbreSpent=opts.arbreSpent(), masterySpent=opts.masterySpent();
+    const canConvert = opts.convert && (masteryPts-masterySpent)>=5;
     $("#budgetBar").innerHTML = `
      <span>Points d'arbre : <b class="tabular ${arbrePts-arbreSpent<0?'over':'ok'}">${arbreSpent} / ${arbrePts}</b></span>
-     <span>Points de maîtrise : <b class="tabular ${masteryPts-masterySpent<0?'over':'ok'}">${masterySpent} / ${masteryPts}</b></span>`;
+     <span>Points de maîtrise : <b class="tabular ${masteryPts-masterySpent<0?'over':'ok'}">${masterySpent} / ${masteryPts}</b></span>
+     ${opts.convert?`<button type="button" class="btn ghost small no-print" id="convertBtn" ${canConvert?"":"disabled"}
+        title="Transforme 5 points de maîtrise inutilisés en 1 point d'arbre supplémentaire (Chapitres VII p.4 et X p.82)">⇄ 5 pts maîtrise → 1 pt d'arbre</button>`:""}`;
+    if(opts.convert){
+      const b=$("#convertBtn");
+      if(b) b.addEventListener("click", ()=>{ if((opts.masteryPts()-opts.masterySpent())<5) return; opts.convert(); paint(); core.renderSummary(); });
+    }
   }
 
   function paint(){
@@ -1556,6 +1575,7 @@ function renderStep5(root){
     arbrePts: core.weaponArbrePoints, masteryPts: core.weaponMasteryPoints,
     arbreSpent: core.weaponArbreSpent, masterySpent: core.weaponMasterySpent,
     store: ()=>core.state.weapon.branches,
+    convert: ()=>{ core.state.weaponMasteryConverted=(core.state.weaponMasteryConverted||0)+5; core.state.weaponArbreBonus=(core.state.weaponArbreBonus||0)+1; core.saveState(); },
     onPrev: ()=>core.go(3), onNext: ()=>core.go(5),
   });
   const sel=$("#wstat"); if(sel) sel.addEventListener("change", e=>{ core.state.weaponStatChoice=e.target.value; core.saveState(); renderStep5(root); core.renderSummary(); });
@@ -1571,6 +1591,7 @@ function renderStep6(root){
     arbrePts: core.magicArbrePoints, masteryPts: core.magicMasteryPoints,
     arbreSpent: core.magicArbreSpent, masterySpent: core.magicMasterySpent,
     store: ()=>core.state.magic.schools,
+    convert: ()=>{ core.state.magicMasteryConverted=(core.state.magicMasteryConverted||0)+5; core.state.magicArbreBonus=(core.state.magicArbreBonus||0)+1; core.saveState(); },
     onPrev: ()=>core.go(4), onNext: ()=>core.go(6),
   });
 }
@@ -1843,6 +1864,8 @@ ${sheetHtml}
        <div class="trackcard"><div class="lbl">PV actuels</div><input type="number" id="trk-pv" value="${core.currentPV()??""}"><div class="sub">départ : ${core.pvValue()??"–"}</div></div>
        <div class="trackcard"><div class="lbl">Or actuel</div><input type="number" id="trk-gold" value="${core.currentGold()??""}"><div class="sub">départ : ${core.goldStart()} PO</div></div>
       </div>
+      <button type="button" class="btn no-print" id="levelUpBtn" style="margin-top:.9rem">⬆ Passage de niveau (niveau ${(s.level||1)} → ${(s.level||1)+1})</button>
+      <p class="help no-print" style="margin-top:.4rem">Calcule et applique automatiquement les PV, la caractéristique éventuelle et les nouveaux points de compétences/maîtrise gagnés (Chapitre X, p.82).</p>
      </div>
 
      <div class="block"><h4>Langues</h4><p>${(s.languages&&s.languages.length)? s.languages.map(esc).join(" · ") : "Aucune sélectionnée ("+core.languageCount()+" disponible(s))"}</p></div>
@@ -1886,7 +1909,111 @@ ${sheetHtml}
     $("#trk-xp").addEventListener("change", e=>{ let v=parseInt(e.target.value,10); if(isNaN(v)||v<0) v=0; s.xp=v; core.saveState(); });
     $("#trk-pv").addEventListener("change", e=>{ const v=e.target.value===""?null:parseInt(e.target.value,10); s.curPV=(v==null||isNaN(v))?null:v; core.saveState(); });
     $("#trk-gold").addEventListener("change", e=>{ const v=e.target.value===""?null:parseInt(e.target.value,10); s.curGold=(v==null||isNaN(v))?null:v; core.saveState(); });
+    $("#levelUpBtn").addEventListener("click", ()=> openLevelUpWizard(paintSheet));
   }
+}
+
+/* ---------- Assistant de passage de niveau (Chapitre X, p.82) ----------
+   Applique : +PV (mod. Constitution, +1 PV fixe si le modificateur est nul), +1 caractéristique au
+   choix tous les 5 niveaux, dé de magie qui évolue tous les 3 niveaux (automatique, déjà géré par
+   magicDieForLevel), et de nouveaux points de compétences civiles / de maîtrise combat & magie.
+   Ces points s'ajoutent aux réserves existantes ; le joueur les dépense ensuite via les étapes
+   III, V et VI, où un bouton permet aussi d'échanger 5 points de maîtrise inutilisés contre 1 point
+   d'arbre supplémentaire. */
+function closeLevelUpModal(){ const b=document.querySelector(".modal-backdrop.lvlup"); if(b) b.remove(); }
+function openLevelUpWizard(onDone){
+  closeLevelUpModal();
+  const s = core.state;
+  s.levelStatBonus = s.levelStatBonus || {FOR:0,CON:0,INT:0,DEX:0,CHA:0,CHANCE:0};
+  s.levelCivilBonus = s.levelCivilBonus || {Savoir:0,Communication:0,Physique:0,Manipulation:0,Discretion:0,Perception:0};
+  const curLevel = s.level||1, nextLevel = curLevel+1;
+  const conMod = core.statModFinal("CON") ?? 0;
+  // "il ajoute son modificateur de Constitution aux PV. Si celui-ci est nul, il rajoute 1 PV" (p.82) —
+  // le texte ne précise pas le cas d'un modificateur négatif : on applique alors ce modificateur tel quel.
+  const pvGain = conMod===0 ? 1 : conMod;
+  const canPickStat = (nextLevel % 5 === 0);
+  const magicStepUp = (nextLevel % 3 === 0);
+  // Trait racial Humain "Compétent : +1 point d'arbre tous les trois niveaux" (p.12). Le livre ne
+  // précise pas d'ancrage explicite ; par cohérence avec les autres mécaniques à cadence de ce même
+  // livre qui déclenchent PILE sur les multiples (dé de magie à 3/6/9, caractéristique à 5/10/15,
+  // Drakéide "tranche de 5 niveaux"), ce bonus se déclenche aux niveaux 3, 6, 9... et non dès la
+  // création (niveau 1).
+  const isHuman = core.state.raceId === "humain";
+  const competentTrigger = isHuman && (nextLevel % 3 === 0);
+
+  function computeGains(){
+    // Chapitre X p.82 : chacun de ces trois calculs multiplie le modificateur concerné par 5
+    // (minimum 1 si le modificateur est inférieur à 1).
+    const civilGains = {};
+    Object.keys(D.SKILL_CATEGORIES).forEach(cat=>{ civilGains[cat] = Math.max(1, core.statModFinal(D.CATEGORY_STAT[cat]) ?? 0) * 5; });
+    const bestMartial = Math.max(core.statModFinal("FOR") ?? 0, core.statModFinal("DEX") ?? 0);
+    const weaponGain = Math.max(1, bestMartial) * 5;
+    const magicGain = Math.max(1, core.statModFinal("INT") ?? 0) * 5;
+    return {civilGains, weaponGain, magicGain};
+  }
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop lvlup no-print";
+  backdrop.innerHTML = `<div class="modal-card">
+    <button type="button" class="btn ghost small modal-close" id="lvlClose">✕ Fermer</button>
+    <h3>Passage de niveau — ${curLevel} → ${nextLevel}</h3>
+    <p class="help">Chapitre X, p.82. Voici ce que ${esc(s.identity.name||"ce personnage")} gagne à ce niveau.</p>
+    <div class="block" style="margin-bottom:.8rem"><b>Points de vie</b> : +${pvGain} PV${conMod===0?" (modificateur de Constitution nul → +1 PV fixe)":" (modificateur de Constitution)"}.</div>
+    ${canPickStat?`<div class="field"><label>Niveau multiple de 5 : choisis une caractéristique à augmenter de +1</label>
+      <select id="lvlStatPick">${D.STATS.map(st=>`<option value="${st}">${D.STAT_LABELS[st]} (actuel : ${core.statFinal(st)})</option>`).join("")}</select></div>`:""}
+    ${magicStepUp?`<div class="block">Niveau multiple de 3 : le dé de magie passe automatiquement à <b>${esc(core.magicDieForLevel(nextLevel))}</b> (Chapitre VI, p.42).</div>`:""}
+    ${competentTrigger?`<div class="field"><label>Trait racial « Compétent » (Humain) : +1 point d'arbre bonus tous les 3 niveaux — dans quel arbre ?</label>
+      <select id="lvlCompetentPick"><option value="weapon">Arbre de combat</option><option value="magic">Arbre de magie</option></select></div>`:""}
+    <div id="lvlGainsRecap"></div>
+    <p class="help">Ces points s'ajoutent à tes réserves existantes — rends-toi ensuite aux étapes III, V et VI pour les dépenser (un bouton y permet aussi d'échanger 5 points de maîtrise inutilisés contre 1 point d'arbre).</p>
+    <div style="display:flex;gap:.6rem;margin-top:1rem">
+      <button type="button" class="btn" id="lvlConfirm">Valider le passage de niveau</button>
+      <button type="button" class="btn secondary" id="lvlCancel">Annuler</button>
+    </div>
+  </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener("click", e=>{ if(e.target===backdrop) closeLevelUpModal(); });
+  $("#lvlClose").addEventListener("click", closeLevelUpModal);
+  $("#lvlCancel").addEventListener("click", closeLevelUpModal);
+
+  function paintGains(){
+    const g = computeGains();
+    $("#lvlGainsRecap").innerHTML = `
+      <div class="block"><b>Points de compétences civiles gagnés</b> <small class="help">(modificateur associé × 5, minimum 1)</small>
+        <table class="simple"><tbody>
+          ${Object.keys(g.civilGains).map(cat=>`<tr><td>${esc(cat)} <small class="help">(${D.STAT_LABELS[D.CATEGORY_STAT[cat]]})</small></td><td class="tabular" style="text-align:right">+${g.civilGains[cat]}</td></tr>`).join("")}
+        </tbody></table>
+      </div>
+      <div class="block">Points de maîtrise de combat : <b>+${g.weaponGain}</b> <small class="help">(meilleur des modificateurs Force/Dextérité × 5, minimum 1)</small></div>
+      <div class="block">Points de maîtrise de magie : <b>+${g.magicGain}</b> <small class="help">(modificateur d'Intelligence × 5, minimum 1)</small></div>
+      ${competentTrigger?`<div class="block">Trait « Compétent » : <b>+1 point d'arbre</b> bonus (à placer selon le choix ci-dessus).</div>`:""}`;
+  }
+  paintGains();
+  const statSel = $("#lvlStatPick"); if(statSel) statSel.addEventListener("change", paintGains);
+
+  $("#lvlConfirm").addEventListener("click", ()=>{
+    const priorCurPV = core.currentPV();
+    const g = computeGains();
+    if(canPickStat){ const picked = $("#lvlStatPick").value; s.levelStatBonus[picked] = (s.levelStatBonus[picked]||0)+1; }
+    if(competentTrigger){
+      const treePick = $("#lvlCompetentPick").value;
+      if(treePick==="magic") s.magicArbreBonus = (s.magicArbreBonus||0)+1;
+      else s.weaponArbreBonus = (s.weaponArbreBonus||0)+1;
+    }
+    s.level = nextLevel;
+    s.curPV = (priorCurPV==null? core.pvValue() : priorCurPV) + pvGain;
+    Object.keys(g.civilGains).forEach(cat=>{ s.levelCivilBonus[cat] = (s.levelCivilBonus[cat]||0) + g.civilGains[cat]; });
+    s.levelWeaponMasteryBonus = (s.levelWeaponMasteryBonus||0) + g.weaponGain;
+    s.levelMagicMasteryBonus = (s.levelMagicMasteryBonus||0) + g.magicGain;
+    // XP : on décompte le seuil du niveau franchi, sans bloquer si le total est insuffisant (certains MJ
+    // accordent des niveaux "à la main", hors calcul strict de l'expérience).
+    const threshold = core.XP_THRESHOLDS[curLevel];
+    if(threshold!=null) s.xp = Math.max(0, (s.xp||0) - threshold);
+    core.saveState();
+    closeLevelUpModal();
+    core.renderSummary();
+    if(onDone) onDone();
+  });
 }
 
 window.ADA.core.renderStep2=renderStep2; window.ADA.core.renderStep3=renderStep3; window.ADA.core.renderStep4=renderStep4;
@@ -1904,8 +2031,8 @@ window.ADA.core.renderStep8=renderStep8;
    ===================================================================== */
 (function(){
 "use strict";
-const SUPA_URL = "https://hqdmhbxrejocscvpqdgk.supabase.co";       // ex. "https://xxxxxxxxxxxx.supabase.co"
-const SUPA_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZG1oYnhyZWpvY3NjdnBxZGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NzczMDYsImV4cCI6MjEwMzE1MzMwNn0.zobPwDqDHsJgccjZedUHq6Q3Sj-0gZfNySjmS5XaMx4";  // clé publique "anon" (ce n'est PAS un secret, elle est faite pour être ici)
+const SUPA_URL = "";       // ex. "https://xxxxxxxxxxxx.supabase.co"
+const SUPA_ANON_KEY = "";  // clé publique "anon" (ce n'est PAS un secret, elle est faite pour être ici)
 
 const core = window.ADA.core, D=core.D, $=core.$, $$=core.$$, esc=core.esc;
 const LS_CHAR_ID = "ada_current_char_id";

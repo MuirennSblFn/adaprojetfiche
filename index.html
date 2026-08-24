@@ -348,30 +348,39 @@ const STAT_LABELS = {FOR:"Force",CON:"Constitution",INT:"Intelligence",DEX:"Dext
 const RACES = [
  {id:"humain",name:"Humain",choice:2,bonus:[],malus:[],
   traits:["Compétent : +1 point d'arbre tous les trois niveaux"],
+  hybridTraits:[{label:"Compétent : +1 point d'arbre tous les trois niveaux",special:"competent"}],
   desc:"Peuple majoritaire et le plus polyvalent du Continent. Vit jusqu'à 70 ans."},
  {id:"nain",name:"Nain",skillBonuses:[{skill:"Artisanat",amount:10},{skill:"Connaissance",amount:10}],bonus:[{stat:"FOR",val:1},{stat:"CON",val:1}],malus:[{stat:"DEX",val:-2}],
   traits:["Vision nocturne","Artisan : +10 en Artisanat (Nain)","Connaissance naine : +10 en Connaissance (Nain)"],
+  hybridTraits:[{label:"Vision nocturne",flavor:true},{label:"Artisan : +10 en Artisanat",skill:"Artisanat",amount:10},{label:"Connaissance naine : +10 en Connaissance",skill:"Connaissance",amount:10}],
   desc:"Civilisation en déclin retranchée dans de majestueuses cités. Vit jusqu'à 200 ans."},
  {id:"semi-nain",name:"Semi-nain",bonus:[{stat:"FOR",val:1},{stat:"CON",val:1}],malus:[{stat:"DEX",val:-1}],
   traits:["Hybride : choisit un trait racial au choix chez l'un de ses parents","Cosmopolite : +10 en Communication avec les races naines et humaines"],
+  hybridParents:["nain","humain"],
   desc:"Fruit de l'union d'un nain et d'une humaine, forte musculature et belle barbe."},
  {id:"haut-elfe",name:"Haut-elfe",skillBonuses:[{category:"Perception",amount:5}],bonus:[{stat:"DEX",val:2},{stat:"CHA",val:1}],malus:[{stat:"CON",val:-2}],
   traits:["Nyctalope","Peuple originel : +10 en Communication avec les elfes","Sens aiguisés : +5 en Perception"],
+  hybridTraits:[{label:"Nyctalope",flavor:true},{label:"Peuple originel : +10 en Communication avec les elfes (conditionnel, non chiffré sur la fiche)",flavor:true},{label:"Sens aiguisés : +5 en Perception",category:"Perception",amount:5}],
   desc:"Fiers descendants des premiers elfes. Vit jusqu'à 300 ans."},
  {id:"elfe-sylvain",name:"Elfe sylvain",skillBonuses:[{skill:"Plantes & Poisons",amount:10},{category:"Perception",amount:5}],bonus:[{stat:"DEX",val:2},{stat:"FOR",val:1}],malus:[{stat:"CON",val:-2}],
   traits:["Nyctalope","Instinct de la forêt : +10 en Plantes/Poisons, +20 en Discrétion en forêt","Sens aiguisés : +5 en Perception"],
+  hybridTraits:[{label:"Nyctalope",flavor:true},{label:"Instinct de la forêt : +10 en Plantes & Poisons (+20 Discrétion en forêt, conditionnel non chiffré)",skill:"Plantes & Poisons",amount:10},{label:"Sens aiguisés : +5 en Perception",category:"Perception",amount:5}],
   desc:"Les plus nombreux des elfes, vivent dans des cités sylvestres."},
  {id:"elfe-noir",name:"Elfe noir",skillBonuses:[{skill:"Connaissance",amount:10},{category:"Perception",amount:5}],bonus:[{stat:"DEX",val:2},{stat:"INT",val:1}],malus:[{stat:"CON",val:-2}],
   traits:["Nyctalope","Affinité magique : +10 en Connaissance (Magie)","Sens aiguisés : +5 en Perception"],
+  hybridTraits:[{label:"Nyctalope",flavor:true},{label:"Affinité magique : +10 en Connaissance",skill:"Connaissance",amount:10},{label:"Sens aiguisés : +5 en Perception",category:"Perception",amount:5}],
   desc:"Vivent souvent dans des grottes ou des villes."},
  {id:"semi-elfe",name:"Semi-elfe",choice:1,bonus:[],malus:[{stat:"CON",val:-1}],
   traits:["+1 supplémentaire dans la caractéristique du parent (CHA/FOR/INT au choix)","Hybride : choisit un trait racial au choix chez l'un de ses parents","Cosmopolite : +10 en Communication à ses races"],
+  hybridParents:["haut-elfe","elfe-sylvain","elfe-noir","humain"],
   desc:"Rares descendants d'histoires d'amour impossibles entre humains et elfes. ~150 ans."},
  {id:"orc",name:"Orc",skillBonuses:[{skill:"Intimider",amount:10},{category:"Physique",amount:5},{category:"Discretion",amount:-10}],bonus:[{stat:"FOR",val:2},{stat:"CON",val:1}],malus:[{stat:"INT",val:-1},{stat:"CHA",val:-1}],
   traits:["Dernier souffle : ignore le premier coup qui va le tuer","Intimidant : +10 en Intimidation","Gros Balourd : -10 en Discrétion (sauf camouflage/déguisement magique)","Grand : +5 en Physique. Doit trouver une monture à sa taille"],
+  hybridTraits:[{label:"Dernier souffle : ignore le premier coup qui va le tuer",flavor:true},{label:"Intimidant : +10 en Intimidation",skill:"Intimider",amount:10},{label:"Gros Balourd : -10 en Discrétion (malus)",category:"Discretion",amount:-10},{label:"Grand : +5 en Physique (doit trouver une monture à sa taille)",category:"Physique",amount:5}],
   desc:"Montagnes de muscles, victimes de racisme malgré leur intégration croissante."},
  {id:"semi-orc",name:"Semi-orc",bonus:[{stat:"FOR",val:1},{stat:"CON",val:1}],malus:[{stat:"CHA",val:-1}],
   traits:["Hybride : choisit un trait racial au choix chez l'un de ses parents","Instinct de la Horde : +10 en Combat quand un orc ou semi-orc est à ses côtés"],
+  hybridParents:["orc","humain"],
   desc:"Généralement issus de viols, méprisés des deux camps."},
  {id:"gnome",name:"Gnome",skillBonuses:[{skill:"Connaissance",amount:10},{skill:"Connaissance",amount:10}],bonus:[{stat:"INT",val:2},{stat:"CHA",val:1}],malus:[{stat:"CON",val:-2}],
   traits:["Affinité magique : +10 en Connaissance (Magie)","Connaissance gnome : +10 en Connaissance (Gnome)"],
@@ -443,12 +452,15 @@ const CLASSES_BASE = [
   n3:"Furtivité : devient invisible pour 1 round. (3 fois / tant qu'il n'attaque pas)",
   n5:"Travail d'équipe : après une attaque, projette l'adversaire sur un ennemi qui peut l'attaquer. (Dégâts de l'allié doublés / dégâts simples mais peut utiliser une compétence)",
   passif:"Évaluer un trésor et marchander +10."},
- {id:"rodeur",name:"Rôdeur",skillBonuses:[{skill:"Pister",amount:20},{skill:"Embuscade",amount:20}],
+ {id:"rodeur",name:"Rôdeur",
+  // Le +20 Pister/Embuscade n'est PAS mis en skillBonuses : c'est un bonus CONDITIONNEL (uniquement
+  // dans le milieu de prédilection choisi, p.21), comme les autres bonus "en forêt"/"avec les nains"
+  // du livre — cf. la règle générale dans fixedSkillSources(). Le choix du milieu se fait à l'étape I.
   tagline:"Pisteur et chasseur, excelle à débusquer ses ennemis.",
   n1:"Camouflage : le rôdeur se camoufle, plus difficile à toucher. (-20 et +1D / -30 et +1D)",
   n3:"Piège : immobilise un ennemi jusqu'à ce qu'il se dégage. (+1d4 dégâts / 2)",
   n5:"Marquage : prend un round pour marquer un ennemi, la prochaine attaque inflige des dégâts doublés ignorant l'armure. (x3 / x5)",
-  passif:"Milieu de prédilection : Pister et Embuscade +20 (désert, montagne, plaines, forêt, grottes, milieu urbain)."},
+  passif:"Milieu de prédilection : Pister et Embuscade +20 dans le milieu choisi (désert, montagne, marais, plaines, forêt, grottes, milieu urbain, ou autre à définir avec le MJ)."},
  {id:"barbare",name:"Barbare",tagline:"Combattant brutal venu des frontières de la civilisation.",
   n1:"Cerné : +1 dégât par ennemi autour de lui (+2 / +3)",
   n3:"Sacrifice de sang : divise ses PV par deux pour une attaque à double dégâts. (2 cibles / soigne le PJ)",
@@ -791,7 +803,8 @@ function freshState(){
     identity:{name:"",player:"",align:"",eyes:"",hair:"",height:"",desc:"",portrait:null},
     raceId:null, raceChoiceBonuses:[],
     classMainId:null, classSecondaryId:null,
-    arcaneMain:null, deityId:null, guerrierWeaponId:null, vampireChoice:null,
+    arcaneMain:null, deityId:null, guerrierWeaponId:null, vampireChoice:null, rodeurMilieu:null, semiElfeParentBonus:null,
+    hybridParentId:null, hybridTraitIdx:null, // trait "Hybride" choisi chez l'un des parents (races métisses)
     rolls:[], rollUsed:[], statRollIndex:{FOR:null,CON:null,INT:null,DEX:null,CHA:null,CHANCE:null},
     civil:{}, // "Compétence": points
     masteries:{}, // "Compétence": ["texte de la maîtrise choisie", ...] (compétence à 100 → 80)
@@ -863,6 +876,9 @@ function statFinal(stat){
   if(race){ race.bonus.concat(race.malus).forEach(b=>{ if(b.stat!==stat) return;
     if(b.op==="mult") multFactor*=b.val; else if(b.op==="div") multFactor/=b.val; else addTotal+=b.val; }); }
   (state.raceChoiceBonuses||[]).forEach(s=>{ if(s===stat) addTotal+=1; });
+  // Semi-elfe : "+1 au choix +1 du parent (CHA/FOR/INT)" (Chapitre I, p.10) — un second +1 distinct du
+  // "+1 au choix" générique (raceChoiceBonuses), restreint à ces trois caractéristiques.
+  if(race && race.id==="semi-elfe" && state.semiElfeParentBonus===stat) addTotal+=1;
   // Bonus de +1 gagnés lors de passages de niveau (Chapitre X p.82 : "un point à l'une des
   // caractéristiques" tous les 5 niveaux) — appliqués APRÈS le calcul racial, comme un +1 littéral.
   const lvlBonus = (state.levelStatBonus && state.levelStatBonus[stat]) || 0;
@@ -913,6 +929,17 @@ function traitBonuses(){ // renvoie map skill -> total bonus des traits naturels
   return map;
 }
 function racialSkillNote(){ return getRace() ? getRace().traits : []; }
+// Résout le trait "Hybride" choisi (races métisses : Semi-nain, Semi-elfe, Semi-orc) : le joueur
+// choisit d'abord l'ascendance du parent (pour le Semi-elfe, en plus le type d'elfe précis), puis un
+// trait dans la liste "hybridTraits" de ce parent. Retourne l'objet trait, ou null si rien n'est choisi.
+function getHybridChoice(){
+  const race = getRace();
+  if(!race || !race.hybridParents || !state.hybridParentId || state.hybridTraitIdx==null) return null;
+  if(!race.hybridParents.includes(state.hybridParentId)) return null;
+  const parent = D.RACES.find(r=>r.id===state.hybridParentId);
+  if(!parent || !parent.hybridTraits) return null;
+  return parent.hybridTraits[state.hybridTraitIdx] || null;
+}
 
 // Bonus fixes et inconditionnels issus des traits raciaux et des dons de classe (passif + niveau 1
 // uniquement, puisque le personnage est créé au niveau 1). Les bonus conditionnels/contextuels du
@@ -930,6 +957,14 @@ function fixedSkillSources(){
   addFrom(getRace(), "race");
   addFrom(getClass(state.classMainId), "classe");
   addFrom(getClass(state.classSecondaryId), "classe 2nd");
+  // Trait "Hybride" hérité d'un parent (Semi-nain/Semi-elfe/Semi-orc) : n'ajoute le bonus que si le
+  // trait choisi en porte un (les traits purement narratifs comme "Vision nocturne" n'en ont pas).
+  (()=>{
+    const h = getHybridChoice();
+    if(!h) return;
+    if(h.skill) sources.push({label:"race (hérité du parent)", skill:h.skill, amount:h.amount});
+    else if(h.category) (D.SKILL_CATEGORIES[h.category]||[]).forEach(sk=> sources.push({label:"race (hérité du parent)", skill:sk, amount:h.amount}));
+  })();
   // Vampire : "Vampire vénérable" (>250 ans) donne +10 en Savoir (catégorie entière). L'autre choix,
   // "Fougue de la jeunesse", donne +10 en Combat — hors compétences civiles, géré dans l'arbre de combat.
   if(state.raceId==="vampire" && state.vampireChoice==="venerable"){
@@ -1080,6 +1115,27 @@ function renderStep1(root){
        <option value="venerable" ${state.vampireChoice==="venerable"?"selected":""}>Vampire vénérable (plus de 250 ans) : +10 en Savoir</option>
      </select></div>`:""}
 
+   ${state.raceId==="semi-elfe"?`
+   <h3 style="margin-top:1.6rem">+1 du parent elfe <small class="help">(en plus du +1 au choix général — Chapitre I, p.10)</small></h3>
+   <div class="field"><label>Caractéristique</label>
+     <select id="f-semielfebonus"><option value="">— choisir —</option>
+       ${["CHA","FOR","INT"].map(st=>`<option value="${st}" ${state.semiElfeParentBonus===st?"selected":""}>${D.STAT_LABELS[st]}</option>`).join("")}
+     </select></div>`:""}
+
+   ${race && race.hybridParents?(()=>{
+     const parent = state.hybridParentId ? D.RACES.find(r=>r.id===state.hybridParentId) : null;
+     return `<h3 style="margin-top:1.6rem">Trait « Hybride » <small class="help">(choisit un trait racial chez l'un de ses parents)</small></h3>
+     ${race.id==="semi-elfe"?`<p class="help">Le Semi-elfe a un parent Humain et un parent Elfe — précise d'abord de quel type d'elfe il s'agit avant de choisir le trait.</p>`:""}
+     <div class="field"><label>Ascendance dont le trait est hérité</label>
+       <select id="f-hybridparent"><option value="">— choisir —</option>
+         ${race.hybridParents.map(pid=>{ const p=D.RACES.find(r=>r.id===pid); return `<option value="${pid}" ${state.hybridParentId===pid?"selected":""}>${esc(p.name)}</option>`; }).join("")}
+       </select></div>
+     ${parent&&parent.hybridTraits?`<div class="field"><label>Trait hérité</label>
+       <select id="f-hybridtrait"><option value="">— choisir —</option>
+         ${parent.hybridTraits.map((t,i)=>`<option value="${i}" ${state.hybridTraitIdx===i?"selected":""}>${esc(t.label)}</option>`).join("")}
+       </select></div>`:""}`;
+   })():""}
+
    <h3 style="margin-top:1.6rem">Classe principale</h3>
    <div class="pick-grid">
      ${D.CLASSES_BASE.map(c=>`<div class="card-pick ${state.classMainId===c.id?'selected':''}" data-classmain="${c.id}">
@@ -1101,6 +1157,14 @@ function renderStep1(root){
      <select id="f-guerrierweapon"><option value="">— choisir —</option>
        ${D.WEAPON_BRANCHES.map(b=>`<option value="${b.id}" ${state.guerrierWeaponId===b.id?"selected":""}>${esc(b.name)} (${b.group})</option>`).join("")}
      </select></div>`:""}
+
+   ${(state.classMainId==="rodeur"||state.classSecondaryId==="rodeur")?`
+   <h3 style="margin-top:1.6rem">Milieu de prédilection <small class="help">(passif Rôdeur : +20 en Pister et Embuscade dans ce milieu, Chapitre III p.21)</small></h3>
+   <div class="field"><label>Milieu</label>
+     <input type="text" id="f-rodeurmilieu" list="milieuOptions" placeholder="ex. Forêt" value="${esc(state.rodeurMilieu||"")}">
+     <datalist id="milieuOptions"><option value="Désert"><option value="Montagne"><option value="Marais"><option value="Plaines"><option value="Forêt"><option value="Grottes"><option value="Milieu urbain"></datalist>
+   </div>
+   <p class="help" style="margin-top:.3rem">Ce bonus reste conditionnel : il ne s'ajoute pas automatiquement au score de Pister/Embuscade affiché sur la fiche, à appliquer manuellement en jeu quand ${esc(state.identity.name||"le personnage")} est dans ce milieu.</p>`:""}
 
    ${(state.classMainId==="mage"||state.classMainId==="ensorceleur"||state.classSecondaryId==="mage"||state.classSecondaryId==="ensorceleur")?(()=>{
      const wantsMage = state.classMainId==="mage"||state.classSecondaryId==="mage";
@@ -1153,7 +1217,17 @@ function renderStep1(root){
   const fd=$("#f-deity"); if(fd) fd.addEventListener("change", e=>{state.deityId=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
   const fw=$("#f-guerrierweapon"); if(fw) fw.addEventListener("change", e=>{state.guerrierWeaponId=e.target.value||null; saveState(); renderSummary();});
   const fv=$("#f-vampirechoice"); if(fv) fv.addEventListener("change", e=>{state.vampireChoice=e.target.value||null; saveState(); renderSummary();});
-  $$("#race-grid .card-pick").forEach(el=> el.addEventListener("click", ()=>{ state.raceId=el.dataset.race; state.raceChoiceBonuses=[]; saveState(); renderStep1(root); renderSummary(); }));
+  const frm=$("#f-rodeurmilieu"); if(frm) frm.addEventListener("change", e=>{state.rodeurMilieu=e.target.value.trim()||null; saveState(); renderSummary();});
+  const fse=$("#f-semielfebonus"); if(fse) fse.addEventListener("change", e=>{state.semiElfeParentBonus=e.target.value||null; saveState(); renderStep1(root); renderSummary();});
+  const fhp=$("#f-hybridparent"); if(fhp) fhp.addEventListener("change", e=>{state.hybridParentId=e.target.value||null; state.hybridTraitIdx=null; saveState(); renderStep1(root); renderSummary();});
+  const fht=$("#f-hybridtrait"); if(fht) fht.addEventListener("change", e=>{const v=e.target.value; state.hybridTraitIdx=v===""?null:parseInt(v,10); saveState(); renderStep1(root); renderSummary();});
+  $$("#race-grid .card-pick").forEach(el=> el.addEventListener("click", ()=>{
+    state.raceId=el.dataset.race; state.raceChoiceBonuses=[];
+    // Change de race : les choix liés à l'ancienne race (parent hybride, +1 du parent elfe,
+    // âge du vampire, milieu du rôdeur reste lié à la classe donc conservé) n'ont plus de sens.
+    state.hybridParentId=null; state.hybridTraitIdx=null; state.semiElfeParentBonus=null; state.vampireChoice=null;
+    saveState(); renderStep1(root); renderSummary();
+  }));
   $$("[data-classmain]").forEach(el=> el.addEventListener("click", ()=>{ state.classMainId=el.dataset.classmain||null; saveState(); renderStep1(root); renderSummary(); }));
   $$("[data-classsec]").forEach(el=> el.addEventListener("click", ()=>{ state.classSecondaryId=el.dataset.classsec||null; saveState(); renderStep1(root); renderSummary(); }));
   $("#next1").addEventListener("click", ()=>go(1));
@@ -1197,7 +1271,7 @@ window.ADA.core = {D,ALL_WEAPON_BRANCHES,$,$$,esc,state,saveState,mod,getRace,ge
  civilBudget,civilSpent,weaponPoolBase,weaponArbrePoints,weaponMasteryPoints,weaponArbreSpent,weaponMasterySpent,
  magicPoolBase,magicArbrePoints,magicMasteryPoints,magicArbreSpent,magicMasterySpent,pvValue,goldStart,languageCount,
  currentPV,currentGold,XP_THRESHOLDS,nextLevelXP,dieAtRank,magicDieForLevel,
- traitBonuses,racialSkillNote,fixedSkillSources,fixedSkillBonuses,allSkillBonuses,d6,roll4d6drop,STEPS,go,renderRail,renderSummary,renderStep1,fmtBonus,freshState};
+ traitBonuses,racialSkillNote,fixedSkillSources,fixedSkillBonuses,allSkillBonuses,getHybridChoice,d6,roll4d6drop,STEPS,go,renderRail,renderSummary,renderStep1,fmtBonus,freshState};
 })();
 </script>
 <script>
@@ -1872,6 +1946,7 @@ ${sheetHtml}
 
      <div class="block"><h4>Traits raciaux</h4><p>${race? race.traits.map(esc).join(" · ") : "—"}</p>
        ${(()=>{ if(s.raceId!=="vampire"||!s.vampireChoice) return ""; const label=s.vampireChoice==="jeunesse"?"Fougue de la jeunesse (moins de 250 ans) : +10 en Combat":"Vampire vénérable (plus de 250 ans) : +10 en Savoir"; return `<p style="margin-top:.4rem"><b>Âge choisi :</b> ${esc(label)}</p>`; })()}
+       ${(()=>{ const h=core.getHybridChoice(); if(!h) return ""; const parent=D.RACES.find(r=>r.id===s.hybridParentId); return `<p style="margin-top:.4rem"><b>Trait hybride hérité (${esc(parent?parent.name:"")}) :</b> ${esc(h.label)}</p>`; })()}
      </div>
 
      <div class="block"><h4>Traits naturels</h4><p>
@@ -1887,6 +1962,7 @@ ${sheetHtml}
          ${(()=>{ const a=core.getArcane(s.arcaneMain); return a?`<p><b>Arcane :</b> ${esc(a.name)} — ${esc(a.archetype)}<br>${esc(a.bonus)} ${esc(a.weakness)}</p>`:""; })()}
          ${(()=>{ const d=core.getDeity(s.deityId); return d?`<p><b>Divinité :</b> ${esc(d.name)} (${esc(d.domaine)})<br><i>Oraison :</i> ${esc(d.oraison)}</p>`:""; })()}
          ${(()=>{ const w=D.WEAPON_BRANCHES.find(x=>x.id===s.guerrierWeaponId); return w?`<p><b>Arme de prédilection :</b> ${esc(w.name)} (+10 maîtrise)</p>`:""; })()}
+         ${s.rodeurMilieu?`<p><b>Milieu de prédilection :</b> ${esc(s.rodeurMilieu)} (Pister et Embuscade +20 dans ce milieu, à appliquer manuellement en jeu)</p>`:""}
        </div>
        <div class="block"><h4>Équipement</h4><p>${s.equipmentText?esc(s.equipmentText).replace(/\\n/g,"<br>"):"—"}</p></div>
      </div>
@@ -1938,8 +2014,13 @@ function openLevelUpWizard(onDone){
   // livre qui déclenchent PILE sur les multiples (dé de magie à 3/6/9, caractéristique à 5/10/15,
   // Drakéide "tranche de 5 niveaux"), ce bonus se déclenche aux niveaux 3, 6, 9... et non dès la
   // création (niveau 1).
-  const isHuman = core.state.raceId === "humain";
-  const competentTrigger = isHuman && (nextLevel % 3 === 0);
+  // Azates : "Hybride divin ; choisi un trait d'humain..." (Chapitre I) — Humain n'ayant qu'un seul
+  // trait racial listé (Compétent), ce n'est pas un choix réel : l'Azates l'obtient donc aussi.
+  // Semi-nain/Semi-elfe/Semi-orc : ne l'obtiennent que s'ils ont choisi "Compétent" comme trait
+  // "Hybride" hérité du parent Humain (cf. getHybridChoice()).
+  const hybridChoice = core.getHybridChoice ? core.getHybridChoice() : null;
+  const hasCompetent = core.state.raceId === "humain" || core.state.raceId === "azates" || (hybridChoice && hybridChoice.special==="competent");
+  const competentTrigger = hasCompetent && (nextLevel % 3 === 0);
 
   function computeGains(){
     // Chapitre X p.82 : chacun de ces trois calculs multiplie le modificateur concerné par 5
@@ -2031,7 +2112,7 @@ window.ADA.core.renderStep8=renderStep8;
    ===================================================================== */
 (function(){
 "use strict";
-const SUPA_URL = "https://hqdmhbxrejocscvpqdgk.supabase.co";       // ex. "https://xxxxxxxxxxxx.supabase.co"
+const SUPA_URL = "https://hqdmhbxrejocscvpqdgk.supabase.co";
 const SUPA_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZG1oYnhyZWpvY3NjdnBxZGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NzczMDYsImV4cCI6MjEwMzE1MzMwNn0.zobPwDqDHsJgccjZedUHq6Q3Sj-0gZfNySjmS5XaMx4";  // clé publique "anon" (ce n'est PAS un secret, elle est faite pour être ici)
 
 const core = window.ADA.core, D=core.D, $=core.$, $$=core.$$, esc=core.esc;
